@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import CreatorCarousel from '@/components/CreatorCarousel.vue';
+import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
+import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
@@ -313,29 +315,6 @@ const featuredCreators = [
             'https://images.unsplash.com/photo-1641391503184-a2131018701b?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         accent: 'bg-brand-teal-400',
         position: 'bg-center',
-    },
-];
-
-const workflow = [
-    {
-        icon: Wand2,
-        title: 'Prompt',
-        text: 'Choose a model and describe the asset you need.',
-    },
-    {
-        icon: Zap,
-        title: 'Generate',
-        text: 'Run multiple versions with transparent credit usage.',
-    },
-    {
-        icon: Layers3,
-        title: 'Organize',
-        text: 'Save results beside templates, sounds, LUTs, and edits.',
-    },
-    {
-        icon: Play,
-        title: 'Publish',
-        text: 'Drop assets into your editor and ship faster.',
     },
 ];
 
@@ -1130,6 +1109,8 @@ const faqs = [
 
         <CreatorCarousel :creators="featuredCreators" />
 
+        <PinnedStoryPanels />
+
         <section class="border-b border-brand-neutral-900/10 bg-white py-14">
             <div
                 class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]"
@@ -1160,41 +1141,7 @@ const faqs = [
             </div>
         </section>
 
-        <section class="bg-brand-neutral-900 py-20 text-white">
-            <div class="mx-auto max-w-7xl px-5 sm:px-8">
-                <div
-                    class="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center"
-                >
-                    <div>
-                        <p
-                            class="text-sm font-bold text-brand-yellow-500 uppercase"
-                        >
-                            Creator workflow
-                        </p>
-                        <h2 class="mt-3 text-4xl leading-tight font-extrabold">
-                            From prompt to publish-ready asset without losing
-                            momentum.
-                        </h2>
-                    </div>
-                    <div class="grid gap-3 sm:grid-cols-2">
-                        <div
-                            v-for="step in workflow"
-                            :key="step.title"
-                            class="rounded-3xl border border-white/15 bg-white/8 p-5"
-                        >
-                            <component
-                                :is="step.icon"
-                                class="mb-5 size-7 text-brand-yellow-500"
-                            />
-                            <h3 class="font-extrabold">{{ step.title }}</h3>
-                            <p class="mt-2 text-sm leading-6 text-white/65">
-                                {{ step.text }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
+        <CreatorWorkflowMotion />
 
         <section
             id="pricing"
