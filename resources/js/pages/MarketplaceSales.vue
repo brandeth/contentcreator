@@ -19,7 +19,7 @@ import {
     Wand2,
     Zap,
 } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const tools = [
     {
@@ -186,12 +186,14 @@ const heroToolDemos = [
         cards: [
             {
                 label: 'Nano Banana',
+                shortLabel: 'Nano',
                 title: 'Studio reveal',
                 mediaType: 'image',
                 url: 'https://plus.unsplash.com/premium_photo-1726869694722-66df5f9621b8?q=80&w=1079&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
             },
             {
                 label: 'Thumbnail',
+                shortLabel: 'Thumb',
                 title: 'Launch pack',
                 mediaType: 'image',
                 url: 'https://plus.unsplash.com/premium_photo-1683140802177-372401d5c783?q=80&w=1198&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
@@ -210,12 +212,14 @@ const heroToolDemos = [
         cards: [
             {
                 label: 'Veo scene',
+                shortLabel: 'Veo',
                 title: 'Motion ad',
                 mediaType: 'video',
                 url: 'https://www.pexels.com/download/video/6976218/',
             },
             {
                 label: 'B-roll',
+                shortLabel: 'B-roll',
                 title: 'Creator short',
                 mediaType: 'video',
                 url: 'https://www.pexels.com/download/video/7778853/',
@@ -234,12 +238,14 @@ const heroToolDemos = [
         cards: [
             {
                 label: 'ElevenLabs',
+                shortLabel: 'Eleven',
                 title: 'Voiceover set',
                 mediaType: 'video',
                 url: 'https://www.pexels.com/download/video/4540152/',
             },
             {
                 label: 'Sound bed',
+                shortLabel: 'Sound',
                 title: 'Audio pack',
                 mediaType: 'video',
                 url: 'https://www.pexels.com/download/video/12336865/',
@@ -319,10 +325,42 @@ const featuredCreators = [
 ];
 
 const comparisons = [
-    ['Pricing model', 'One credit wallet', 'Multiple subscriptions'],
-    ['Creator assets', 'AI tools plus templates', 'Usually one tool category'],
-    ['Workflow', 'Generate, save, and reuse', 'Export and re-upload manually'],
-    ['Learning curve', 'Consistent UI', 'New interface every tool'],
+    {
+        icon: Coins,
+        need: 'Pricing model',
+        promptEdit: 'One credit wallet',
+        separateTools: 'Multiple subscriptions',
+        detail: 'Buy credits once and spend them across the marketplace.',
+        badge: 'No lock-in',
+        accent: 'bg-brand-yellow-500',
+    },
+    {
+        icon: Layers3,
+        need: 'Creator assets',
+        promptEdit: 'AI tools plus templates',
+        separateTools: 'Usually one tool category',
+        detail: 'Generation tools sit beside templates, LUTs, and assets.',
+        badge: 'Assets included',
+        accent: 'bg-brand-teal-400',
+    },
+    {
+        icon: Zap,
+        need: 'Workflow',
+        promptEdit: 'Generate, save, and reuse',
+        separateTools: 'Export and re-upload manually',
+        detail: 'Keep ideas, outputs, and reusable pieces in one flow.',
+        badge: 'Reusable',
+        accent: 'bg-brand-pink-400',
+    },
+    {
+        icon: Search,
+        need: 'Learning curve',
+        promptEdit: 'Consistent UI',
+        separateTools: 'New interface every tool',
+        detail: 'Creators learn one surface instead of chasing every model UI.',
+        badge: 'Familiar',
+        accent: 'bg-brand-blue-400',
+    },
 ];
 
 const stats = [
@@ -368,6 +406,43 @@ const faqs = [
         answer: 'AI generation gets the asset made. Templates, LUTs, effects, and sounds help creators finish the actual video faster.',
     },
 ];
+
+const pricingSection = ref<HTMLElement | null>(null);
+const pricingSectionVisible = ref(false);
+let pricingObserver: IntersectionObserver | null = null;
+
+const revealPricingSection = () => {
+    pricingSectionVisible.value = true;
+    pricingObserver?.disconnect();
+    pricingObserver = null;
+};
+
+onMounted(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        revealPricingSection();
+        return;
+    }
+
+    pricingObserver = new IntersectionObserver(
+        ([entry]) => {
+            if (entry?.isIntersecting) {
+                revealPricingSection();
+            }
+        },
+        {
+            rootMargin: '0px 0px -12% 0px',
+            threshold: 0.25,
+        },
+    );
+
+    if (pricingSection.value) {
+        pricingObserver.observe(pricingSection.value);
+    }
+});
+
+onBeforeUnmount(() => {
+    pricingObserver?.disconnect();
+});
 </script>
 
 <template>
@@ -385,7 +460,7 @@ const faqs = [
     </Head>
 
     <main
-        class="min-h-screen bg-brand-neutral-100 font-['Poppins'] text-brand-neutral-900"
+        class="min-h-screen overflow-x-hidden bg-brand-neutral-100 font-['Poppins'] text-brand-neutral-900"
     >
         <header
             class="sticky top-0 z-40 border-b border-brand-neutral-900/10 bg-brand-neutral-100/90 backdrop-blur"
@@ -431,7 +506,7 @@ const faqs = [
             class="relative overflow-hidden border-b border-brand-neutral-900/10"
         >
             <div
-                class="mx-auto grid min-h-[calc(100vh-4rem)] w-full max-w-7xl items-center gap-10 px-5 py-12 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:py-16"
+                class="mx-auto grid w-full max-w-7xl items-center gap-10 px-5 py-12 sm:px-8 md:py-16 lg:grid-cols-[0.95fr_1.05fr] lg:py-20 xl:min-h-[calc(100vh-4rem)] xl:py-16"
             >
                 <div class="max-w-2xl">
                     <div
@@ -444,7 +519,7 @@ const faqs = [
                     </div>
 
                     <h1
-                        class="text-4xl leading-[1.08] font-extrabold tracking-normal text-brand-neutral-900 sm:text-5xl lg:text-6xl"
+                        class="text-4xl leading-[1.08] font-extrabold tracking-normal text-brand-neutral-900 sm:text-5xl xl:text-6xl"
                     >
                         Create AI content from one place.
                     </h1>
@@ -493,7 +568,7 @@ const faqs = [
 
                 <div class="relative">
                     <div
-                        class="rounded-[2rem] border border-brand-neutral-900 bg-white p-3 shadow-[8px_8px_0_0_#2e1401]"
+                        class="rounded-4xl border border-brand-neutral-900 bg-white p-3 shadow-[8px_8px_0_0_#2e1401]"
                     >
                         <div
                             class="overflow-hidden rounded-[1.4rem] border border-brand-neutral-900 bg-brand-neutral-900 text-white"
@@ -586,8 +661,10 @@ const faqs = [
                                     </div>
                                 </aside>
 
-                                <div class="space-y-4">
-                                    <div class="grid gap-3 sm:grid-cols-2">
+                                <div class="space-y-3 xl:space-y-4">
+                                    <div
+                                        class="grid gap-2 sm:grid-cols-2 xl:gap-3"
+                                    >
                                         <a
                                             v-for="card in activeHeroDemo.cards"
                                             :key="card.title"
@@ -602,7 +679,7 @@ const faqs = [
                                                       }
                                                     : undefined
                                             "
-                                            class="group relative aspect-[4/5] overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
+                                            class="group relative aspect-4/5 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
                                         >
                                             <video
                                                 v-if="
@@ -618,38 +695,48 @@ const faqs = [
                                                 preload="metadata"
                                             />
                                             <div
-                                                class="absolute inset-0 bg-gradient-to-t from-brand-neutral-900/85 via-brand-neutral-900/25 to-transparent transition group-hover:from-brand-neutral-900/70"
+                                                class="absolute inset-0 bg-linear-to-t from-brand-neutral-900/85 via-brand-neutral-900/25 to-transparent transition group-hover:from-brand-neutral-900/70"
                                             />
                                             <div
-                                                class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-1.5 p-4"
+                                                class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-1.5 p-3 xl:p-4"
                                             >
                                                 <div
-                                                    class="inline-flex max-w-[calc(100%-2.5rem)] rounded-full bg-white px-2.5 py-1 text-[0.7rem] leading-tight font-bold whitespace-nowrap text-brand-neutral-900"
+                                                    class="inline-flex max-w-full overflow-hidden rounded-full bg-white px-2 py-1 text-[0.65rem] leading-tight font-bold text-ellipsis whitespace-nowrap text-brand-neutral-900 xl:max-w-[calc(100%-2.5rem)] xl:px-2.5 xl:text-[0.7rem]"
                                                 >
-                                                    {{ card.label }}
+                                                    <span class="xl:hidden">
+                                                        {{
+                                                            card.shortLabel ??
+                                                            card.label
+                                                        }}
+                                                    </span>
+                                                    <span
+                                                        class="hidden xl:inline"
+                                                    >
+                                                        {{ card.label }}
+                                                    </span>
                                                 </div>
                                                 <span
-                                                    class="grid size-8 shrink-0 place-items-center rounded-full bg-white/20 text-white backdrop-blur"
+                                                    class="hidden size-8 shrink-0 place-items-center rounded-full bg-white/20 text-white backdrop-blur xl:grid"
                                                 >
                                                     <Play
                                                         v-if="
                                                             card.mediaType ===
                                                             'video'
                                                         "
-                                                        class="size-4 fill-current"
+                                                        class="size-3.5 fill-current xl:size-4"
                                                     />
                                                     <component
                                                         :is="Image"
                                                         v-else
-                                                        class="size-4"
+                                                        class="size-3.5 xl:size-4"
                                                     />
                                                 </span>
                                             </div>
                                             <div
-                                                class="absolute inset-x-0 bottom-0 z-10 p-4"
+                                                class="absolute inset-x-0 bottom-0 z-10 p-3 xl:p-4"
                                             >
                                                 <div
-                                                    class="max-w-[11rem] text-xl leading-tight font-extrabold sm:text-2xl"
+                                                    class="max-w-44 text-lg leading-tight font-extrabold sm:text-xl xl:text-2xl"
                                                 >
                                                     {{ card.title }}
                                                 </div>
@@ -658,16 +745,18 @@ const faqs = [
                                     </div>
 
                                     <div
-                                        class="rounded-3xl border border-white/10 bg-white p-4 text-brand-neutral-900"
+                                        class="rounded-3xl border border-white/10 bg-white p-3 text-brand-neutral-900 xl:p-4"
                                     >
                                         <div
                                             class="mb-3 flex items-center justify-between"
                                         >
-                                            <div class="font-extrabold">
+                                            <div
+                                                class="text-sm font-extrabold xl:text-base"
+                                            >
                                                 Generation queue
                                             </div>
                                             <div
-                                                class="text-xs font-semibold text-brand-neutral-600"
+                                                class="text-[0.65rem] font-semibold text-brand-neutral-600 xl:text-xs"
                                             >
                                                 {{ activeHeroDemo.running }}
                                             </div>
@@ -677,7 +766,7 @@ const faqs = [
                                                 v-for="bar in activeHeroDemo.bars"
                                                 :key="bar"
                                                 :class="[
-                                                    'h-3 rounded-full transition-all',
+                                                    'h-2.5 rounded-full transition-all xl:h-3',
                                                     bar,
                                                 ]"
                                             />
@@ -1080,7 +1169,7 @@ const faqs = [
 
                                 <div
                                     v-else
-                                    class="absolute inset-x-8 bottom-8 grid grid-cols-4 gap-2"
+                                    class="absolute right-5 bottom-5 flex h-[42%] max-h-32 min-h-24 justify-end gap-2 sm:right-6 sm:bottom-6 md:right-8 md:bottom-8 lg:inset-x-8 lg:bottom-8 lg:grid lg:h-auto lg:max-h-none lg:min-h-0 lg:grid-cols-4"
                                 >
                                     <div
                                         v-for="tone in [
@@ -1091,12 +1180,12 @@ const faqs = [
                                         ]"
                                         :key="tone"
                                         :class="[
-                                            'aspect-[3/5] rounded-lg border border-white/40 p-2 shadow-[2px_2px_0_0_rgba(255,255,255,.35)]',
+                                            'aspect-3/5 h-full rounded-lg border border-white/40 p-2 shadow-[2px_2px_0_0_rgba(255,255,255,.35)] lg:h-auto',
                                             tone,
                                         ]"
                                     >
                                         <span
-                                            class="mt-12 block h-3 rounded-full bg-brand-neutral-900"
+                                            class="mt-8 block h-3 rounded-full bg-brand-neutral-900 lg:mt-12"
                                         />
                                     </div>
                                 </div>
@@ -1145,12 +1234,20 @@ const faqs = [
 
         <section
             id="pricing"
+            ref="pricingSection"
             class="border-b border-brand-neutral-900/10 bg-white py-20"
         >
             <div
                 class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
             >
-                <div>
+                <div
+                    class="transition-all duration-700 ease-out"
+                    :class="
+                        pricingSectionVisible
+                            ? 'translate-y-0 opacity-100'
+                            : 'translate-y-8 opacity-0'
+                    "
+                >
                     <p class="text-sm font-bold text-brand-pink-700 uppercase">
                         Pricing
                     </p>
@@ -1169,89 +1266,228 @@ const faqs = [
                 </div>
 
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <article
-                        class="rounded-[2rem] border border-brand-neutral-900 bg-brand-neutral-100 p-6 shadow-[5px_5px_0_0_#2e1401]"
+                    <div
+                        class="transition-all delay-150 duration-700 ease-out"
+                        :class="
+                            pricingSectionVisible
+                                ? 'translate-y-0 opacity-100'
+                                : 'translate-y-10 opacity-0'
+                        "
                     >
-                        <Coins class="mb-6 size-8 text-brand-blue-600" />
-                        <h3 class="text-2xl font-extrabold">Pay as you go</h3>
-                        <p
-                            class="mt-2 text-sm font-semibold text-brand-neutral-600"
+                        <article
+                            class="h-full rounded-4xl border border-brand-neutral-900 bg-brand-neutral-100 p-6 shadow-[5px_5px_0_0_#2e1401] transition-transform duration-300 ease-out lg:-rotate-1 lg:hover:rotate-0"
                         >
-                            Buy credits. Use only what you need.
-                        </p>
-                        <div class="my-8 text-5xl font-extrabold">$98</div>
-                        <ul class="space-y-3 text-sm font-medium">
-                            <li class="flex gap-2">
-                                <Check class="size-5 text-brand-blue-600" />
-                                $110 worth of AI credits
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="size-5 text-brand-blue-600" /> No
-                                required subscription
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="size-5 text-brand-blue-600" /> Use
-                                across supported tools
-                            </li>
-                        </ul>
-                    </article>
+                            <Coins class="mb-6 size-8 text-brand-blue-600" />
+                            <h3 class="text-2xl font-extrabold">
+                                Pay as you go
+                            </h3>
+                            <p
+                                class="mt-2 text-sm font-semibold text-brand-neutral-600"
+                            >
+                                Buy credits. Use only what you need.
+                            </p>
+                            <div class="my-8 text-5xl font-extrabold">$98</div>
+                            <ul class="space-y-3 text-sm font-medium">
+                                <li class="flex gap-2">
+                                    <Check class="size-5 text-brand-blue-600" />
+                                    $110 worth of AI credits
+                                </li>
+                                <li class="flex gap-2">
+                                    <Check class="size-5 text-brand-blue-600" />
+                                    No required subscription
+                                </li>
+                                <li class="flex gap-2">
+                                    <Check class="size-5 text-brand-blue-600" />
+                                    Use across supported tools
+                                </li>
+                            </ul>
+                        </article>
+                    </div>
 
-                    <article
-                        class="rounded-[2rem] border border-brand-neutral-900 bg-brand-yellow-500 p-6 shadow-[5px_5px_0_0_#2e1401]"
+                    <div
+                        class="transition-all delay-500 duration-700 ease-out"
+                        :class="
+                            pricingSectionVisible
+                                ? 'translate-y-0 opacity-100'
+                                : 'translate-y-10 opacity-0'
+                        "
                     >
-                        <Sparkles class="mb-6 size-8" />
-                        <h3 class="text-2xl font-extrabold">
-                            Creator membership
-                        </h3>
-                        <p
-                            class="mt-2 text-sm font-semibold text-brand-neutral-600"
+                        <article
+                            class="h-full rounded-4xl border border-brand-neutral-900 bg-brand-yellow-500 p-6 shadow-[5px_5px_0_0_#2e1401] transition-transform duration-300 ease-out lg:rotate-1 lg:hover:rotate-0"
                         >
-                            Credits plus the asset library.
-                        </p>
-                        <div class="my-8 text-5xl font-extrabold">
-                            $39<span class="text-lg">/mo</span>
-                        </div>
-                        <ul class="space-y-3 text-sm font-medium">
-                            <li class="flex gap-2">
-                                <Check class="size-5" /> $49 credits every month
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="size-5" /> 100,000+ templates and
-                                assets
-                            </li>
-                            <li class="flex gap-2">
-                                <Check class="size-5" /> Faster creative
-                                iteration
-                            </li>
-                        </ul>
-                    </article>
+                            <Sparkles class="mb-6 size-8" />
+                            <h3 class="text-2xl font-extrabold">
+                                Creator membership
+                            </h3>
+                            <p
+                                class="mt-2 text-sm font-semibold text-brand-neutral-600"
+                            >
+                                Credits plus the asset library.
+                            </p>
+                            <div class="my-8 text-5xl font-extrabold">
+                                $39<span class="text-lg">/mo</span>
+                            </div>
+                            <ul class="space-y-3 text-sm font-medium">
+                                <li class="flex gap-2">
+                                    <Check class="size-5" /> $49 credits every
+                                    month
+                                </li>
+                                <li class="flex gap-2">
+                                    <Check class="size-5" /> 100,000+ templates
+                                    and assets
+                                </li>
+                                <li class="flex gap-2">
+                                    <Check class="size-5" /> Faster creative
+                                    iteration
+                                </li>
+                            </ul>
+                        </article>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <section class="py-20">
+        <section class="bg-brand-neutral-900 py-20 text-white">
             <div class="mx-auto max-w-7xl px-5 sm:px-8">
-                <h2 class="max-w-2xl text-4xl leading-tight font-extrabold">
-                    Why this beats subscription sprawl.
-                </h2>
                 <div
-                    class="mt-8 overflow-hidden rounded-[2rem] border border-brand-neutral-900 bg-white shadow-[5px_5px_0_0_#2e1401]"
+                    class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
                 >
-                    <div
-                        class="grid grid-cols-3 bg-brand-neutral-900 px-4 py-3 text-sm font-bold text-white sm:px-6"
-                    >
-                        <div>Need</div>
-                        <div>PromptEdit</div>
-                        <div>Separate tools</div>
+                    <div>
+                        <p
+                            class="text-sm font-bold text-brand-yellow-500 uppercase"
+                        >
+                            Cleaner by design
+                        </p>
+                        <h2
+                            class="mt-3 max-w-3xl text-4xl leading-tight font-extrabold"
+                        >
+                            Why this beats subscription sprawl.
+                        </h2>
                     </div>
                     <div
-                        v-for="row in comparisons"
-                        :key="row[0]"
-                        class="grid grid-cols-3 gap-3 border-t border-brand-neutral-900/10 px-4 py-4 text-sm sm:px-6"
+                        class="inline-flex w-fit items-center gap-2 rounded-full border border-white bg-white px-4 py-2 text-xs font-extrabold text-brand-neutral-900 shadow-[3px_3px_0_0_var(--color-brand-yellow-500)]"
                     >
-                        <div class="font-bold">{{ row[0] }}</div>
-                        <div class="text-brand-neutral-600">{{ row[1] }}</div>
-                        <div class="text-brand-neutral-600">{{ row[2] }}</div>
+                        <Sparkles class="size-4 text-brand-pink-700" />
+                        One workspace, fewer tabs
+                    </div>
+                </div>
+
+                <div
+                    class="mt-10 grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch"
+                >
+                    <div
+                        class="flex h-full flex-col rounded-4xl border border-white bg-brand-yellow-500 p-5 text-brand-neutral-900 shadow-[8px_8px_0_0_var(--color-brand-neutral-900)] sm:p-7 lg:-rotate-1"
+                    >
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-extrabold uppercase">
+                                    PromptEdit
+                                </p>
+                                <h3
+                                    class="mt-2 max-w-xl text-3xl leading-tight font-extrabold"
+                                >
+                                    One creator wallet that keeps the work
+                                    moving.
+                                </h3>
+                            </div>
+                            <span
+                                class="grid size-14 shrink-0 place-items-center rounded-full border border-brand-neutral-900 bg-white shadow-[3px_3px_0_0_#2e1401]"
+                            >
+                                <Sparkles class="size-6" />
+                            </span>
+                        </div>
+
+                        <div
+                            class="mt-8 grid flex-1 auto-rows-fr gap-3 sm:grid-cols-2"
+                        >
+                            <div
+                                v-for="item in comparisons"
+                                :key="item.promptEdit"
+                                class="flex h-full flex-col rounded-3xl border border-brand-neutral-900 bg-white p-4 shadow-[3px_3px_0_0_#2e1401]"
+                            >
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <span
+                                            class="grid size-10 shrink-0 place-items-center rounded-full border border-brand-neutral-900"
+                                            :class="item.accent"
+                                        >
+                                            <component
+                                                :is="item.icon"
+                                                class="size-5"
+                                            />
+                                        </span>
+                                        <p
+                                            class="text-xs font-extrabold uppercase"
+                                        >
+                                            {{ item.need }}
+                                        </p>
+                                    </div>
+                                    <span
+                                        class="rounded-full border border-brand-neutral-900 bg-brand-neutral-100 px-2.5 py-1 text-[0.65rem] leading-none font-extrabold whitespace-nowrap uppercase"
+                                    >
+                                        {{ item.badge }}
+                                    </span>
+                                </div>
+                                <p
+                                    class="mt-5 text-lg leading-snug font-extrabold"
+                                >
+                                    {{ item.promptEdit }}
+                                </p>
+                                <p
+                                    class="mt-3 text-sm leading-5 font-semibold text-brand-neutral-600"
+                                >
+                                    {{ item.detail }}
+                                </p>
+                                <div
+                                    class="mt-auto flex items-center gap-2 pt-5"
+                                >
+                                    <span
+                                        class="h-2 flex-1 rounded-full border border-brand-neutral-900"
+                                        :class="item.accent"
+                                    ></span>
+                                    <span
+                                        class="h-2 w-8 rounded-full border border-brand-neutral-900 bg-brand-neutral-900"
+                                    ></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex h-full flex-col gap-5 lg:pt-8">
+                        <div
+                            class="flex items-center justify-between gap-3 rounded-3xl border border-white/20 bg-white/10 px-5 py-4"
+                        >
+                            <p class="text-sm font-extrabold uppercase">
+                                Separate tools
+                            </p>
+                            <span class="text-sm font-bold text-white/70">
+                                The tab pile-up
+                            </span>
+                        </div>
+
+                        <article
+                            v-for="item in comparisons"
+                            :key="item.separateTools"
+                            class="flex-1 rounded-3xl border border-brand-neutral-900 bg-white p-5 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-yellow-500)] transition-transform duration-300 ease-out lg:odd:rotate-1 lg:even:-rotate-1 lg:hover:rotate-0"
+                        >
+                            <p
+                                class="text-brand-neutral-500 text-xs font-extrabold uppercase"
+                            >
+                                {{ item.need }}
+                            </p>
+                            <div class="mt-3 flex items-start gap-3">
+                                <span
+                                    class="mt-1 grid size-8 shrink-0 place-items-center rounded-full border border-brand-neutral-900 bg-brand-neutral-100"
+                                >
+                                    <PlugZap class="size-4" />
+                                </span>
+                                <p class="text-xl leading-snug font-extrabold">
+                                    {{ item.separateTools }}
+                                </p>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </div>

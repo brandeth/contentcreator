@@ -20,7 +20,7 @@ const workflowPoints: WorkflowPoint[] = [
             'https://plus.unsplash.com/premium_photo-1726869694722-66df5f9621b8?q=80&w=1079&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         mediaType: 'image',
         positionClass:
-            'creator-workflow-motion__initial left-[55%] top-[5%] sm:left-[60%]',
+            'creator-workflow-motion__initial left-1/2 top-[5%] -translate-x-1/2 md:left-[55%] md:translate-x-0 lg:left-[60%]',
         tiltClass: 'tilt-right',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'right-0 left-auto translate-x-0',
@@ -30,7 +30,8 @@ const workflowPoints: WorkflowPoint[] = [
         text: 'Run image, video, and audio variations from one credit wallet.',
         mediaUrl: 'https://www.pexels.com/download/video/6976218/',
         mediaType: 'video',
-        positionClass: 'left-[6%] top-[22%] sm:left-[10%]',
+        positionClass:
+            'left-1/2 top-[22%] -translate-x-1/2 md:left-[10%] md:translate-x-0',
         tiltClass: 'tilt-left',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'left-0 translate-x-0',
@@ -41,7 +42,8 @@ const workflowPoints: WorkflowPoint[] = [
         mediaUrl:
             'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=745&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         mediaType: 'image',
-        positionClass: 'right-[6%] top-[39%] sm:right-[10%]',
+        positionClass:
+            'left-1/2 top-[39%] -translate-x-1/2 md:left-auto md:right-[10%] md:translate-x-0',
         tiltClass: 'tilt-right',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'right-0 left-auto translate-x-0',
@@ -52,7 +54,8 @@ const workflowPoints: WorkflowPoint[] = [
         mediaUrl:
             'https://images.unsplash.com/photo-1641391503184-a2131018701b?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         mediaType: 'image',
-        positionClass: 'left-[10%] top-[57%] sm:left-[20%]',
+        positionClass:
+            'left-1/2 top-[57%] -translate-x-1/2 md:left-[20%] md:translate-x-0',
         tiltClass: 'tilt-left',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'left-0 translate-x-0 sm:left-1/2 sm:-translate-x-1/2',
@@ -62,7 +65,8 @@ const workflowPoints: WorkflowPoint[] = [
         text: 'Bundle the best outputs into a campaign-ready asset set.',
         mediaUrl: 'https://www.pexels.com/download/video/12336865/',
         mediaType: 'video',
-        positionClass: 'left-[50%] top-[76%] sm:left-[60%]',
+        positionClass:
+            'left-1/2 top-[76%] -translate-x-1/2 md:left-[50%] md:translate-x-0 lg:left-[60%]',
         tiltClass: 'tilt-right',
         labelPositionClass: 'bottom-full mb-3',
         labelClass: 'right-0 left-auto translate-x-0',
@@ -73,7 +77,8 @@ const workflowPoints: WorkflowPoint[] = [
         mediaUrl:
             'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
         mediaType: 'image',
-        positionClass: 'left-[6%] top-[90%] sm:left-[15%]',
+        positionClass:
+            'left-1/2 top-[90%] -translate-x-1/2 md:left-[15%] md:translate-x-0',
         tiltClass: 'tilt-left',
         labelPositionClass: 'bottom-full mb-3',
         labelClass: 'left-0 translate-x-0',
@@ -452,8 +457,14 @@ onBeforeUnmount(() => {
 }
 
 .creator-workflow-motion__point {
-    width: clamp(16rem, calc(19rem + 3vw), 25rem);
+    width: min(18rem, calc(100vw - 3rem));
     aspect-ratio: 5 / 7;
+}
+
+.creator-workflow-motion__label {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
 }
 
 .creator-workflow-motion__marker {
@@ -506,26 +517,101 @@ onBeforeUnmount(() => {
 }
 
 .creator-workflow-motion__asset {
-    top: calc(50% - 50px);
-    left: calc(50% - 50px);
+    top: calc(50% - 36px);
+    left: calc(50% - 36px);
+    width: 72px;
+    height: 72px;
     background-image: url('https://assets.codepen.io/16327/flair-26.png');
     will-change: transform;
 }
 
+@media (min-width: 768px) {
+    .creator-workflow-motion__point {
+        width: clamp(16rem, calc(19rem + 3vw), 25rem);
+    }
+
+    .creator-workflow-motion__label {
+        left: auto;
+        right: auto;
+        transform: none;
+    }
+
+    .creator-workflow-motion__asset {
+        top: calc(50% - 50px);
+        left: calc(50% - 50px);
+        width: 100px;
+        height: 100px;
+    }
+}
+
 .creator-workflow-motion.is-static .creator-workflow-motion__stage {
+    display: grid;
+    gap: 1.25rem;
     height: auto;
+    min-height: 0;
     padding-block: 3rem;
 }
 
+.creator-workflow-motion.is-static .creator-workflow-motion__grid,
+.creator-workflow-motion.is-static .creator-workflow-motion__path-guide {
+    display: none;
+}
+
 .creator-workflow-motion.is-static .creator-workflow-motion__point {
+    display: grid;
+    box-sizing: border-box;
+    width: min(28rem, calc(100vw - 2.5rem));
+    aspect-ratio: auto;
     position: relative;
     inset: auto;
-    margin-block: 1rem;
     margin-inline: auto;
     padding-inline: 0;
 }
 
+.creator-workflow-motion.is-static .creator-workflow-motion__marker {
+    height: auto;
+    aspect-ratio: 4 / 3;
+    padding: 0.5rem;
+}
+
+.creator-workflow-motion.is-static .creator-workflow-motion__media-card {
+    aspect-ratio: 4 / 3;
+    opacity: 1;
+    filter: saturate(1.05) contrast(1.02);
+    transform: none;
+}
+
+.creator-workflow-motion.is-static .creator-workflow-motion__label {
+    box-sizing: border-box;
+    position: static;
+    width: 100%;
+    margin-top: 0.75rem;
+    transform: none;
+}
+
 .creator-workflow-motion.is-static .creator-workflow-motion__asset {
     display: none;
+}
+
+@media (min-width: 768px) {
+    .creator-workflow-motion.is-static .creator-workflow-motion__stage {
+        display: block;
+    }
+
+    .creator-workflow-motion.is-static .creator-workflow-motion__point {
+        width: clamp(16rem, calc(19rem + 3vw), 25rem);
+        aspect-ratio: 5 / 7;
+        margin-block: 1rem;
+    }
+
+    .creator-workflow-motion.is-static .creator-workflow-motion__marker,
+    .creator-workflow-motion.is-static .creator-workflow-motion__media-card {
+        aspect-ratio: 5 / 7;
+    }
+
+    .creator-workflow-motion.is-static .creator-workflow-motion__label {
+        position: absolute;
+        width: min(16rem, 72vw);
+    }
 }
 </style>

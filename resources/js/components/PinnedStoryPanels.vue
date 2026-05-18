@@ -96,13 +96,17 @@ const teardownAnimations = () => {
 const prefersReducedMotion = () =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const canPinPanels = () => window.matchMedia('(min-width: 768px)').matches;
+
 const initializePinnedPanels = async () => {
     const root = wrapper.value;
 
-    if (!root || prefersReducedMotion()) {
+    if (!root || prefersReducedMotion() || !canPinPanels()) {
         root?.classList.add('is-static');
         return;
     }
+
+    root.classList.remove('is-static');
 
     const [{ gsap }, { ScrollTrigger }] = await Promise.all([
         import('gsap'),
@@ -226,12 +230,12 @@ onBeforeUnmount(() => {
             v-for="panel in panels"
             :key="panel.title"
             :class="[
-                'pinned-story-panel relative flex min-h-[calc(100svh-4rem)] items-stretch overflow-hidden border-y border-brand-neutral-900/10',
+                'pinned-story-panel relative flex min-h-[calc(100svh-4rem)] items-stretch overflow-visible border-y border-brand-neutral-900/10 md:overflow-hidden',
                 panel.surfaceClass,
             ]"
         >
             <div
-                class="pinned-story-panel__frame flex w-full items-stretch overflow-hidden"
+                class="pinned-story-panel__frame flex w-full items-stretch overflow-visible md:overflow-hidden"
             >
                 <div
                     class="pinned-story-panel__inner mx-auto grid min-h-full w-full max-w-7xl gap-8 px-5 py-10 sm:px-8 md:grid-cols-[0.9fr_1.1fr] md:items-center lg:gap-12 lg:py-14"
@@ -339,7 +343,7 @@ onBeforeUnmount(() => {
 }
 
 .pinned-story-panel__frame {
-    max-height: calc(100svh - 4rem);
+    max-height: none;
 }
 
 .pinned-story-panel__inner {
@@ -348,9 +352,22 @@ onBeforeUnmount(() => {
 
 .pinned-story-panels.is-static .pinned-story-panel {
     min-height: auto;
+    transform: none;
+    opacity: 1;
 }
 
 .pinned-story-panels.is-static .pinned-story-panel__frame {
     max-height: none;
+    overflow: visible;
+}
+
+.pinned-story-panels.is-static .pinned-story-panel__inner {
+    transform: none;
+}
+
+@media (min-width: 768px) {
+    .pinned-story-panel__frame {
+        max-height: calc(100svh - 4rem);
+    }
 }
 </style>

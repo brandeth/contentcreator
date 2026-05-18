@@ -35,22 +35,160 @@ const visibleCreators = computed(() => props.creators.slice(0, 5));
 const creatorCards = ref<Creator[]>([]);
 const selectedCreator = ref<Creator | null>(null);
 const isDetailOpen = ref(false);
+const isDetailFlipped = ref(false);
 
 const frontCreator = computed(
     () => creatorCards.value[creatorCards.value.length - 1] ?? null,
 );
 
 const creatorSlider = ref<HTMLElement | null>(null);
+const mobileGallery = ref<HTMLElement | null>(null);
+const mobileDragProxy = ref<HTMLElement | null>(null);
 let activeFlip: { kill: () => void } | null = null;
+let mobileGsapContext: { revert: () => void } | null = null;
+let mobileDraggable: Array<{ kill: () => void }> = [];
+let mobileMediaQuery: MediaQueryList | null = null;
 let isAnimating = false;
+const mobileActiveIndex = ref(0);
 
 watch(
     visibleCreators,
     (creators) => {
         creatorCards.value = [...creators];
+        mobileActiveIndex.value = Math.min(
+            mobileActiveIndex.value,
+            Math.max(creators.length - 1, 0),
+        );
     },
     { immediate: true },
 );
+
+const getWrappedOffset = (
+    index: number,
+    activeIndex: number,
+    total: number,
+) => {
+    const midpoint = Math.floor(total / 2);
+
+    return ((index - activeIndex + total + midpoint) % total) - midpoint;
+};
+
+const renderMobileCarousel = async (animate = true) => {
+    const gallery = mobileGallery.value;
+    const total = visibleCreators.value.length;
+
+    if (!gallery || total === 0) {
+        return;
+    }
+
+    const { gsap } = await import('gsap');
+    const cards = gsap.utils.toArray<HTMLElement>(
+        gallery.querySelectorAll('.mobile-creator-card'),
+    );
+
+    cards.forEach((card, index) => {
+        const offset = getWrappedOffset(index, mobileActiveIndex.value, total);
+        const distance = Math.abs(offset);
+        const state = {
+            xPercent: -50 + offset * 42,
+            y: distance * 16,
+            rotate: offset * 5,
+            scale: distance === 0 ? 1 : distance === 1 ? 0.82 : 0.68,
+            opacity: distance > 2 ? 0 : distance === 2 ? 0.45 : 1,
+            zIndex: 20 - distance,
+        };
+
+        if (animate) {
+            gsap.to(card, {
+                ...state,
+                duration: 0.55,
+                ease: 'power3.out',
+            });
+
+            return;
+        }
+
+        gsap.set(card, state);
+    });
+};
+
+const moveMobileCreatorCard = async (
+    direction: 'next' | 'previous' = 'next',
+) => {
+    const total = visibleCreators.value.length;
+
+    if (!total) {
+        return;
+    }
+
+    mobileActiveIndex.value =
+        direction === 'next'
+            ? (mobileActiveIndex.value + 1) % total
+            : (mobileActiveIndex.value - 1 + total) % total;
+
+    await renderMobileCarousel();
+};
+
+const handleMobileCardClick = async (index: number) => {
+    if (index === mobileActiveIndex.value) {
+        openCreatorDetails(visibleCreators.value[index] ?? null);
+        return;
+    }
+
+    mobileActiveIndex.value = index;
+    await renderMobileCarousel();
+};
+
+const teardownMobileCarousel = () => {
+    mobileDraggable.forEach((draggable) => draggable.kill());
+    mobileDraggable = [];
+    mobileGsapContext?.revert();
+    mobileGsapContext = null;
+};
+
+const setupMobileCarousel = async () => {
+    if (!mobileGallery.value || mobileGsapContext) {
+        return;
+    }
+
+    const [{ gsap }, { Draggable }] = await Promise.all([
+        import('gsap'),
+        import('gsap/Draggable'),
+    ]);
+
+    gsap.registerPlugin(Draggable);
+
+    mobileGsapContext = gsap.context(() => {
+        renderMobileCarousel(false);
+
+        if (!mobileDragProxy.value || !mobileGallery.value) {
+            return;
+        }
+
+        mobileDraggable = Draggable.create(mobileDragProxy.value, {
+            type: 'x',
+            trigger: mobileGallery.value,
+            onDragEnd(this: { startX: number; x: number }) {
+                const distance = this.x - this.startX;
+
+                if (Math.abs(distance) > 36) {
+                    moveMobileCreatorCard(distance < 0 ? 'next' : 'previous');
+                }
+
+                gsap.set(mobileDragProxy.value, { x: 0 });
+            },
+        });
+    }, mobileGallery.value);
+};
+
+const handleMobileCarouselQuery = () => {
+    if (mobileMediaQuery?.matches) {
+        setupMobileCarousel();
+        return;
+    }
+
+    teardownMobileCarousel();
+};
 
 const updateCreatorCards = async (nextCards: Creator[]) => {
     const slider = creatorSlider.value;
@@ -139,8 +277,19 @@ const openCreatorDetails = (creator: Creator | null) => {
     }
 
     selectedCreator.value = creator;
+    isDetailFlipped.value = false;
     isDetailOpen.value = true;
 };
+
+const toggleCreatorDetails = () => {
+    isDetailFlipped.value = !isDetailFlipped.value;
+};
+
+watch(isDetailOpen, (isOpen) => {
+    if (!isOpen) {
+        isDetailFlipped.value = false;
+    }
+});
 
 const handleCreatorDeckClick = (event: MouseEvent) => {
     if (!(event.target instanceof Element)) {
@@ -166,10 +315,15 @@ const handleCreatorDeckClick = (event: MouseEvent) => {
 
 onMounted(() => {
     creatorSlider.value?.addEventListener('click', handleCreatorDeckClick);
+    mobileMediaQuery = window.matchMedia('(max-width: 1023px)');
+    mobileMediaQuery.addEventListener('change', handleMobileCarouselQuery);
+    handleMobileCarouselQuery();
 });
 
 onBeforeUnmount(() => {
     creatorSlider.value?.removeEventListener('click', handleCreatorDeckClick);
+    mobileMediaQuery?.removeEventListener('change', handleMobileCarouselQuery);
+    teardownMobileCarousel();
     activeFlip?.kill();
 });
 </script>
@@ -192,7 +346,91 @@ onBeforeUnmount(() => {
                 </h2>
             </div>
 
-            <div class="relative h-144 lg:h-156">
+            <div
+                class="relative -mx-5 h-136 overflow-hidden sm:-mx-8 lg:hidden"
+            >
+                <div ref="mobileGallery" class="mobile-creator-gallery">
+                    <article
+                        v-for="(creator, index) in visibleCreators"
+                        :key="creator.name"
+                        class="mobile-creator-card flex flex-col overflow-hidden rounded-3xl border border-brand-neutral-900 bg-brand-neutral-0 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-neutral-900)]"
+                        :aria-label="
+                            index === mobileActiveIndex
+                                ? `View ${creator.name} details`
+                                : `Show ${creator.name}`
+                        "
+                        role="button"
+                        tabindex="0"
+                        @click="handleMobileCardClick(index)"
+                        @keydown.enter.prevent="handleMobileCardClick(index)"
+                        @keydown.space.prevent="handleMobileCardClick(index)"
+                    >
+                        <div
+                            :style="{
+                                backgroundImage: `url('${creator.imageUrl}')`,
+                            }"
+                            :class="[
+                                'relative min-h-0 flex-1 bg-cover',
+                                creator.position,
+                            ]"
+                        >
+                            <div
+                                class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4"
+                            >
+                                <span
+                                    class="rounded-full border border-brand-neutral-900 bg-brand-neutral-900 px-3 py-1.5 text-xs font-bold text-brand-neutral-0"
+                                >
+                                    {{ creator.category }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div :class="['min-h-44 p-5', creator.accent]">
+                            <h4 class="text-3xl leading-tight font-extrabold">
+                                {{ creator.name }}
+                            </h4>
+                            <p class="mt-5 font-semibold">Featured in</p>
+                            <div class="mt-3 grid gap-2 text-sm font-bold">
+                                <div class="flex items-center gap-2">
+                                    <Play
+                                        class="size-5 fill-brand-neutral-900"
+                                    />
+                                    {{ creator.metric }}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <Music2
+                                        class="size-5 fill-brand-neutral-900"
+                                    />
+                                    {{ creator.usage }}
+                                </div>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div
+                    class="absolute bottom-0 left-1/2 z-30 flex -translate-x-1/2 items-center justify-center gap-4"
+                >
+                    <button
+                        type="button"
+                        class="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand-neutral-100 bg-brand-neutral-900 px-6 text-sm font-extrabold text-brand-neutral-100 shadow-[3px_3px_0_0_var(--color-brand-neutral-900)] transition hover:bg-brand-pink-400 hover:text-brand-neutral-900 focus:ring-2 focus:ring-brand-pink-400 focus:outline-none"
+                        @click="moveMobileCreatorCard('previous')"
+                    >
+                        Prev
+                    </button>
+                    <button
+                        type="button"
+                        class="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-brand-neutral-100 bg-brand-neutral-900 px-6 text-sm font-extrabold text-brand-neutral-100 shadow-[3px_3px_0_0_var(--color-brand-neutral-900)] transition hover:bg-brand-pink-400 hover:text-brand-neutral-900 focus:ring-2 focus:ring-brand-pink-400 focus:outline-none"
+                        @click="moveMobileCreatorCard('next')"
+                    >
+                        Next
+                    </button>
+                </div>
+
+                <div ref="mobileDragProxy" class="mobile-drag-proxy"></div>
+            </div>
+
+            <div class="relative hidden h-144 lg:block lg:h-156">
                 <button
                     type="button"
                     class="absolute top-1/2 left-0 z-20 grid size-12 -translate-y-1/2 place-items-center rounded-full border-2 border-brand-yellow-500 bg-brand-neutral-900 text-brand-yellow-500 shadow-[3px_3px_0_0_var(--color-brand-yellow-500)] transition hover:bg-brand-yellow-500 hover:text-brand-neutral-900 focus:ring-2 focus:ring-brand-yellow-500 focus:outline-none sm:left-6"
@@ -290,7 +528,165 @@ onBeforeUnmount(() => {
                     class="flex min-h-dvh items-center justify-center px-5 py-14 sm:px-8"
                 >
                     <div
-                        class="grid w-full max-w-5xl items-center gap-5 lg:grid-cols-[0.95fr_1.05fr] lg:gap-8"
+                        class="creator-detail-flip-shell lg:hidden"
+                        :class="{ 'is-flipped': isDetailFlipped }"
+                    >
+                        <div
+                            class="creator-detail-flip-card"
+                            role="button"
+                            tabindex="0"
+                            :aria-label="
+                                isDetailFlipped
+                                    ? `Show ${selectedCreator.name} cover`
+                                    : `Show ${selectedCreator.name} details`
+                            "
+                            :aria-pressed="isDetailFlipped"
+                            @click="toggleCreatorDetails"
+                            @keydown.enter.prevent="toggleCreatorDetails"
+                            @keydown.space.prevent="toggleCreatorDetails"
+                        >
+                            <div
+                                class="creator-detail-flip-face creator-detail-flip-face-front overflow-hidden rounded-3xl border border-brand-neutral-900 bg-brand-neutral-0 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-neutral-900)]"
+                            >
+                                <div
+                                    :style="{
+                                        backgroundImage: `url('${selectedCreator.imageUrl}')`,
+                                    }"
+                                    :class="[
+                                        'relative h-full bg-cover',
+                                        selectedCreator.position,
+                                    ]"
+                                >
+                                    <div
+                                        class="absolute inset-0 bg-linear-to-t from-brand-neutral-900/82 via-brand-neutral-900/8 to-transparent"
+                                    />
+                                    <span
+                                        :class="[
+                                            'absolute top-5 right-5 rounded-full border border-brand-neutral-900 px-3 py-1 text-xs font-extrabold text-brand-neutral-900',
+                                            selectedCreator.accent,
+                                        ]"
+                                    >
+                                        {{ selectedCreator.category }}
+                                    </span>
+                                    <div
+                                        class="absolute inset-x-5 bottom-5 rounded-2xl border border-brand-neutral-900 bg-brand-neutral-0 p-5"
+                                    >
+                                        <h3
+                                            class="text-3xl leading-none font-extrabold"
+                                        >
+                                            {{ selectedCreator.name }}
+                                        </h3>
+                                        <p
+                                            class="mt-2 text-sm font-bold text-brand-neutral-600 uppercase"
+                                        >
+                                            Featured creator asset
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div
+                                class="creator-detail-flip-face creator-detail-flip-face-back flex flex-col overflow-y-auto rounded-3xl border border-brand-neutral-900 bg-brand-neutral-0 p-5 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-neutral-900)] sm:p-6"
+                            >
+                                <div
+                                    :class="[
+                                        'mb-5 h-2.5 rounded-full border border-brand-neutral-900',
+                                        selectedCreator.accent,
+                                    ]"
+                                />
+
+                                <DialogHeader class="text-left">
+                                    <DialogTitle
+                                        class="text-3xl leading-none font-extrabold text-brand-neutral-900 sm:text-4xl"
+                                    >
+                                        {{ selectedCreator.name }}
+                                    </DialogTitle>
+                                    <DialogDescription
+                                        class="text-sm font-extrabold tracking-wide text-brand-neutral-600 uppercase"
+                                    >
+                                        {{ selectedCreator.category }}
+                                    </DialogDescription>
+                                </DialogHeader>
+
+                                <p
+                                    class="mt-5 text-base leading-7 font-medium text-brand-neutral-600"
+                                >
+                                    {{
+                                        selectedCreator.details ??
+                                        `${selectedCreator.name} is featured for creator-ready work with ${selectedCreator.metric} and ${selectedCreator.usage}.`
+                                    }}
+                                </p>
+
+                                <div
+                                    class="mt-auto grid gap-3 pt-6 sm:grid-cols-2"
+                                >
+                                    <div
+                                        class="grid min-h-28 overflow-hidden rounded-xl border-t border-r-2 border-b-2 border-l border-brand-neutral-900 bg-brand-neutral-0 text-brand-neutral-900"
+                                    >
+                                        <div
+                                            class="flex items-center gap-3 p-4"
+                                        >
+                                            <span
+                                                :class="[
+                                                    'grid size-10 shrink-0 place-items-center rounded-xl border border-brand-neutral-900',
+                                                    selectedCreator.accent,
+                                                ]"
+                                            >
+                                                <Play
+                                                    class="size-4 fill-brand-neutral-900"
+                                                />
+                                            </span>
+                                            <div>
+                                                <p
+                                                    class="text-xs font-bold text-brand-neutral-600 uppercase"
+                                                >
+                                                    Reach
+                                                </p>
+                                                <p
+                                                    class="mt-1 text-lg font-extrabold"
+                                                >
+                                                    {{ selectedCreator.metric }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div
+                                        class="grid min-h-28 overflow-hidden rounded-xl border-t border-r-2 border-b-2 border-l border-brand-neutral-900 bg-brand-neutral-0 text-brand-neutral-900"
+                                    >
+                                        <div
+                                            class="flex items-center gap-3 p-4"
+                                        >
+                                            <span
+                                                :class="[
+                                                    'grid size-10 shrink-0 place-items-center rounded-xl border border-brand-neutral-900',
+                                                    selectedCreator.accent,
+                                                ]"
+                                            >
+                                                <Music2
+                                                    class="size-4 fill-brand-neutral-900"
+                                                />
+                                            </span>
+                                            <div>
+                                                <p
+                                                    class="text-xs font-bold text-brand-neutral-600 uppercase"
+                                                >
+                                                    Reuse
+                                                </p>
+                                                <p
+                                                    class="mt-1 text-lg font-extrabold"
+                                                >
+                                                    {{ selectedCreator.usage }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        class="creator-detail-desktop-layout hidden w-full max-w-5xl items-center gap-5 lg:grid lg:grid-cols-[0.95fr_1.05fr] lg:gap-8"
                     >
                         <div
                             class="group relative h-136 origin-bottom-right -rotate-2 overflow-hidden rounded-3xl border border-brand-neutral-900 bg-brand-neutral-0 text-brand-neutral-900 sm:h-152 lg:h-160"
@@ -430,6 +826,35 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+.mobile-creator-gallery {
+    position: absolute;
+    top: 1.5rem;
+    inset-inline: 0;
+    height: 26rem;
+    touch-action: pan-y;
+}
+
+.mobile-creator-card {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: min(15.5rem, 68vw);
+    height: 26rem;
+    cursor: grab;
+    will-change: transform, opacity;
+}
+
+.mobile-creator-card:active {
+    cursor: grabbing;
+}
+
+.mobile-drag-proxy {
+    visibility: hidden;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+}
+
 .creator-slider {
     position: absolute;
     width: min(300px, 68vw);
@@ -472,5 +897,40 @@ onBeforeUnmount(() => {
 .creator-card:nth-child(1) {
     left: 80px;
     top: -80px;
+}
+
+.creator-detail-flip-shell {
+    width: min(calc(100vw - 2.5rem), 26rem, calc((100dvh - 7rem) * 2 / 3));
+    aspect-ratio: 2 / 3;
+    perspective: 1200px;
+}
+
+.creator-detail-flip-card {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    outline: none;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.creator-detail-flip-card:focus-visible {
+    border-radius: 1.5rem;
+    box-shadow: 0 0 0 4px var(--color-brand-yellow-500);
+}
+
+.creator-detail-flip-shell.is-flipped .creator-detail-flip-card {
+    transform: rotateY(180deg);
+}
+
+.creator-detail-flip-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+}
+
+.creator-detail-flip-face-back {
+    transform: rotateY(180deg);
 }
 </style>
