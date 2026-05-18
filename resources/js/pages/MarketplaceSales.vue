@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CreatorCarousel from '@/components/CreatorCarousel.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
@@ -16,6 +17,7 @@ import {
     Wand2,
     Zap,
 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 const tools = [
     {
@@ -169,6 +171,148 @@ const bentoItems = [
         layout: 'lg:col-span-3 lg:row-span-2',
         visual: 'posters',
         imageUrl: undefined,
+    },
+];
+
+const activeHeroTool = ref(0);
+
+const heroToolDemos = [
+    {
+        tabTitle: 'AI image tools',
+        search: 'Product ad',
+        running: '3 running',
+        cards: [
+            {
+                label: 'Nano Banana',
+                title: 'Studio reveal',
+                mediaType: 'image',
+                url: 'https://plus.unsplash.com/premium_photo-1726869694722-66df5f9621b8?q=80&w=1079&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+            },
+            {
+                label: 'Thumbnail',
+                title: 'Launch pack',
+                mediaType: 'image',
+                url: 'https://plus.unsplash.com/premium_photo-1683140802177-372401d5c783?q=80&w=1198&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+            },
+        ],
+        bars: [
+            'w-full bg-brand-yellow-500',
+            'w-4/5 bg-brand-teal-400',
+            'w-2/3 bg-brand-pink-400',
+        ],
+    },
+    {
+        tabTitle: 'AI video tools',
+        search: 'Veo scene',
+        running: '2 rendering',
+        cards: [
+            {
+                label: 'Veo scene',
+                title: 'Motion ad',
+                mediaType: 'video',
+                url: 'https://www.pexels.com/download/video/6976218/',
+            },
+            {
+                label: 'B-roll',
+                title: 'Creator short',
+                mediaType: 'video',
+                url: 'https://www.pexels.com/download/video/7778853/',
+            },
+        ],
+        bars: [
+            'w-11/12 bg-brand-blue-400',
+            'w-3/4 bg-brand-yellow-500',
+            'w-1/2 bg-brand-teal-400',
+        ],
+    },
+    {
+        tabTitle: 'AI audio tools',
+        search: 'Voiceover',
+        running: '4 mixing',
+        cards: [
+            {
+                label: 'ElevenLabs',
+                title: 'Voiceover set',
+                mediaType: 'video',
+                url: 'https://www.pexels.com/download/video/4540152/',
+            },
+            {
+                label: 'Sound bed',
+                title: 'Audio pack',
+                mediaType: 'video',
+                url: 'https://www.pexels.com/download/video/12336865/',
+            },
+        ],
+        bars: [
+            'w-5/6 bg-brand-pink-400',
+            'w-3/4 bg-brand-teal-400',
+            'w-2/5 bg-brand-yellow-500',
+        ],
+    },
+];
+
+const activeHeroDemo = computed(() => heroToolDemos[activeHeroTool.value]);
+
+const featuredCreators = [
+    {
+        name: 'Mina Vale',
+        category: 'AI portraits',
+        metric: '4.8M generated views',
+        usage: '18k creator remixes',
+        imageUrl:
+            'https://plus.unsplash.com/premium_photo-1664272436668-78437b92929e?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        accent: 'bg-brand-yellow-500',
+        position: 'bg-center',
+    },
+    {
+        name: 'Studio North',
+        category: 'Video hooks',
+        metric: '12M short-form views',
+        usage: '44k saved templates',
+        imageUrl:
+            'https://images.unsplash.com/flagged/photo-1572392640988-ba48d1a74457?q=80&w=764&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        accent: 'bg-brand-teal-400',
+        position: 'bg-center',
+    },
+    {
+        name: 'Cleo Render',
+        category: 'Launch visuals',
+        metric: '31k campaign exports',
+        usage: '9k asset packs',
+        imageUrl:
+            'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=745&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        accent: 'bg-brand-pink-400',
+        position: 'bg-center',
+    },
+    {
+        name: 'Ari Motion',
+        category: 'B-roll systems',
+        metric: '7.2M ad impressions',
+        usage: '26k rendered clips',
+        imageUrl:
+            'https://images.unsplash.com/photo-1547891654-e66ed7ebb968?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        accent: 'bg-brand-blue-400',
+        position: 'bg-center',
+    },
+    {
+        name: 'Kota Pack',
+        category: 'Brand kits',
+        metric: '19k reusable assets',
+        usage: '61k prompt runs',
+        imageUrl:
+            'https://images.unsplash.com/photo-1634986666676-ec8fd927c23d?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        accent: 'bg-brand-yellow-500',
+        position: 'bg-center',
+    },
+    {
+        name: 'Luma Stack',
+        category: 'Template drops',
+        metric: '82k saved edits',
+        usage: '14k creator projects',
+        imageUrl:
+            'https://images.unsplash.com/photo-1641391503184-a2131018701b?q=80&w=880&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        accent: 'bg-brand-teal-400',
+        position: 'bg-center',
     },
 ];
 
@@ -397,20 +541,40 @@ const faqs = [
                             </div>
 
                             <div
-                                class="grid gap-4 p-4 md:grid-cols-[0.65fr_1fr]"
+                                class="grid gap-4 p-4 md:grid-cols-[0.48fr_1fr]"
                             >
-                                <aside class="rounded-2xl bg-white/8 p-4">
+                                <aside class="rounded-2xl bg-white/8 p-3">
                                     <div
-                                        class="mb-4 flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs leading-snug font-semibold text-brand-neutral-900"
+                                        class="mb-3 flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs leading-snug font-semibold text-brand-neutral-900"
                                     >
                                         <Search class="size-3.5 shrink-0" />
-                                        Product ad
+                                        {{ activeHeroDemo.search }}
                                     </div>
                                     <div class="space-y-3">
-                                        <div
+                                        <button
                                             v-for="tool in tools.slice(0, 3)"
                                             :key="tool.title"
-                                            class="rounded-2xl border border-white/10 bg-white/8 p-3"
+                                            type="button"
+                                            :aria-pressed="
+                                                activeHeroDemo.tabTitle ===
+                                                tool.title
+                                            "
+                                            :class="[
+                                                'w-full rounded-2xl border p-3 text-left transition focus:ring-2 focus:ring-white/70 focus:outline-none',
+                                                activeHeroDemo.tabTitle ===
+                                                tool.title
+                                                    ? 'border-white/25 bg-white/16 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]'
+                                                    : 'border-white/10 bg-white/8 hover:bg-white/12',
+                                            ]"
+                                            @click="
+                                                activeHeroTool = tools
+                                                    .slice(0, 3)
+                                                    .findIndex(
+                                                        (item) =>
+                                                            item.title ===
+                                                            tool.title,
+                                                    )
+                                            "
                                         >
                                             <div
                                                 class="flex items-center gap-3"
@@ -439,48 +603,79 @@ const faqs = [
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </button>
                                     </div>
                                 </aside>
 
                                 <div class="space-y-4">
-                                    <div class="grid grid-cols-2 gap-3">
-                                        <div
-                                            class="aspect-[4/5] rounded-3xl border border-white/10 bg-[linear-gradient(135deg,#92adeb,#47d9c9)] p-3"
+                                    <div class="grid gap-3 sm:grid-cols-2">
+                                        <a
+                                            v-for="card in activeHeroDemo.cards"
+                                            :key="card.title"
+                                            :href="card.url"
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            :style="
+                                                card.mediaType === 'image' &&
+                                                card.url
+                                                    ? {
+                                                          backgroundImage: `url('${card.url}'), linear-gradient(135deg, #92adeb, #47d9c9 58%, #2e1401)`,
+                                                      }
+                                                    : undefined
+                                            "
+                                            class="group relative aspect-[4/5] overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
                                         >
+                                            <video
+                                                v-if="
+                                                    card.mediaType ===
+                                                        'video' && card.url
+                                                "
+                                                class="absolute inset-0 size-full object-cover"
+                                                :src="card.url"
+                                                autoplay
+                                                muted
+                                                loop
+                                                playsinline
+                                                preload="metadata"
+                                            />
                                             <div
-                                                class="flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-white/25 p-3"
+                                                class="absolute inset-0 bg-gradient-to-t from-brand-neutral-900/85 via-brand-neutral-900/25 to-transparent transition group-hover:from-brand-neutral-900/70"
+                                            />
+                                            <div
+                                                class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-1.5 p-4"
                                             >
                                                 <div
-                                                    class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-neutral-900"
+                                                    class="inline-flex max-w-[calc(100%-2.5rem)] rounded-full bg-white px-2.5 py-1 text-[0.7rem] leading-tight font-bold whitespace-nowrap text-brand-neutral-900"
                                                 >
-                                                    Veo scene
+                                                    {{ card.label }}
                                                 </div>
-                                                <div
-                                                    class="text-lg leading-tight font-extrabold sm:text-xl"
+                                                <span
+                                                    class="grid size-8 shrink-0 place-items-center rounded-full bg-white/20 text-white backdrop-blur"
                                                 >
-                                                    Studio product reveal
-                                                </div>
+                                                    <Play
+                                                        v-if="
+                                                            card.mediaType ===
+                                                            'video'
+                                                        "
+                                                        class="size-4 fill-current"
+                                                    />
+                                                    <component
+                                                        :is="Image"
+                                                        v-else
+                                                        class="size-4"
+                                                    />
+                                                </span>
                                             </div>
-                                        </div>
-                                        <div
-                                            class="aspect-[4/5] rounded-3xl border border-white/10 bg-[linear-gradient(135deg,#fc8ae5,#f8cb46)] p-3"
-                                        >
                                             <div
-                                                class="flex h-full flex-col justify-between rounded-2xl border border-white/50 bg-white/25 p-3"
+                                                class="absolute inset-x-0 bottom-0 z-10 p-4"
                                             >
                                                 <div
-                                                    class="inline-flex w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-brand-neutral-900"
+                                                    class="max-w-[11rem] text-xl leading-tight font-extrabold sm:text-2xl"
                                                 >
-                                                    Thumbnail
-                                                </div>
-                                                <div
-                                                    class="text-lg leading-tight font-extrabold sm:text-xl"
-                                                >
-                                                    Creator launch pack
+                                                    {{ card.title }}
                                                 </div>
                                             </div>
-                                        </div>
+                                        </a>
                                     </div>
 
                                     <div
@@ -495,54 +690,23 @@ const faqs = [
                                             <div
                                                 class="text-xs font-semibold text-brand-neutral-600"
                                             >
-                                                3 running
+                                                {{ activeHeroDemo.running }}
                                             </div>
                                         </div>
                                         <div class="space-y-2">
                                             <div
-                                                class="h-3 rounded-full bg-brand-yellow-500"
-                                            />
-                                            <div
-                                                class="h-3 w-4/5 rounded-full bg-brand-teal-400"
-                                            />
-                                            <div
-                                                class="h-3 w-2/3 rounded-full bg-brand-pink-400"
+                                                v-for="bar in activeHeroDemo.bars"
+                                                :key="bar"
+                                                :class="[
+                                                    'h-3 rounded-full transition-all',
+                                                    bar,
+                                                ]"
                                             />
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="border-b border-brand-neutral-900/10 bg-white py-14">
-            <div
-                class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]"
-            >
-                <div>
-                    <p class="text-sm font-bold text-brand-pink-700 uppercase">
-                        The problem
-                    </p>
-                    <h2 class="mt-3 text-4xl leading-tight font-extrabold">
-                        Creators should not need five subscriptions to make one
-                        video.
-                    </h2>
-                </div>
-                <div class="grid gap-3 sm:grid-cols-2">
-                    <div
-                        v-for="item in [
-                            'Model hopping',
-                            'Surprise monthly bills',
-                            'Separate asset libraries',
-                            'Manual export chaos',
-                        ]"
-                        :key="item"
-                        class="rounded-3xl border border-brand-neutral-900 bg-brand-neutral-100 p-5 font-bold shadow-[3px_3px_0_0_#2e1401]"
-                    >
-                        {{ item }}
                     </div>
                 </div>
             </div>
@@ -614,21 +778,20 @@ const faqs = [
                             What you can create
                         </p>
                         <h2 class="mt-3 text-4xl leading-tight font-extrabold">
-                            Show the range with a bento grid instead of another
-                            row of equal cards.
+                            Show the generated images and videos like the
+                            product.
                         </h2>
                         <p
                             class="mt-4 max-w-2xl text-base leading-7 text-brand-neutral-600"
                         >
-                            The larger tiles sell high-value output like video
-                            campaigns, while smaller tiles make the library feel
-                            broad without giving every category the same visual
-                            weight.
+                            The grid leads with actual media, then uses compact
+                            labels so creators can scan the asset types without
+                            covering the work.
                         </p>
                     </div>
 
                     <div
-                        class="grid grid-flow-dense auto-rows-[260px] gap-4 sm:auto-rows-[300px] lg:auto-rows-[150px] lg:grid-cols-12"
+                        class="grid grid-flow-dense auto-rows-[280px] gap-4 sm:auto-rows-[340px] lg:auto-rows-[170px] lg:grid-cols-12"
                     >
                         <article
                             v-for="item in bentoItems"
@@ -641,10 +804,10 @@ const faqs = [
                                     : undefined
                             "
                             :class="[
-                                'group relative overflow-hidden rounded-[1.5rem] border border-brand-neutral-900 p-5 shadow-[3px_3px_0_0_#2e1401] transition hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#2e1401]',
+                                'group relative overflow-hidden rounded-[1.5rem] border border-brand-neutral-900 shadow-[3px_3px_0_0_#2e1401] transition hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#2e1401]',
                                 item.imageUrl || item.videoUrl
                                     ? 'flex items-end bg-cover bg-center text-white'
-                                    : '',
+                                    : 'p-5',
                                 item.accent,
                                 item.layout,
                             ]"
@@ -662,8 +825,19 @@ const faqs = [
 
                             <div
                                 v-if="item.imageUrl || item.videoUrl"
-                                class="absolute inset-0 bg-gradient-to-t from-brand-neutral-900/90 via-brand-neutral-900/40 to-brand-neutral-900/10 transition group-hover:from-brand-neutral-900/80"
+                                class="absolute inset-0 bg-gradient-to-t from-brand-neutral-900/88 via-brand-neutral-900/28 to-transparent transition group-hover:from-brand-neutral-900/76"
                             />
+
+                            <div
+                                v-if="item.imageUrl || item.videoUrl"
+                                class="absolute top-4 right-4 z-10 grid size-10 place-items-center rounded-full border border-white/20 bg-white/18 text-white backdrop-blur"
+                            >
+                                <Play
+                                    v-if="item.videoUrl"
+                                    class="size-4 fill-current"
+                                />
+                                <component :is="Image" v-else class="size-4" />
+                            </div>
 
                             <div
                                 v-if="
@@ -671,7 +845,12 @@ const faqs = [
                                     item.imageUrl ||
                                     item.videoUrl
                                 "
-                                class="relative z-10 max-w-[15rem]"
+                                :class="[
+                                    'relative z-10',
+                                    item.imageUrl || item.videoUrl
+                                        ? 'w-full p-5 sm:p-6'
+                                        : 'max-w-[15rem]',
+                                ]"
                             >
                                 <span
                                     :class="[
@@ -688,18 +867,23 @@ const faqs = [
                                     {{ item.eyebrow }}
                                 </span>
                                 <h3
-                                    class="text-2xl leading-tight font-extrabold"
+                                    :class="[
+                                        'leading-tight font-extrabold',
+                                        item.imageUrl || item.videoUrl
+                                            ? 'max-w-[17rem] text-3xl'
+                                            : 'text-2xl',
+                                    ]"
                                 >
                                     {{ item.title }}
                                 </h3>
                                 <p
                                     :class="[
-                                        'mt-3 hidden text-sm leading-6 sm:block',
+                                        'mt-3 hidden max-w-[22rem] text-sm leading-6 sm:block',
                                         item.imageUrl || item.videoUrl
                                             ? 'text-white/80'
                                             : item.accent.includes('text-white')
                                               ? 'text-white/75'
-                                            : 'text-brand-neutral-600',
+                                              : 'text-brand-neutral-600',
                                     ]"
                                 >
                                     {{ item.description }}
@@ -939,6 +1123,38 @@ const faqs = [
                                 </div>
                             </div>
                         </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <CreatorCarousel :creators="featuredCreators" />
+
+        <section class="border-b border-brand-neutral-900/10 bg-white py-14">
+            <div
+                class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]"
+            >
+                <div>
+                    <p class="text-sm font-bold text-brand-pink-700 uppercase">
+                        The problem
+                    </p>
+                    <h2 class="mt-3 text-4xl leading-tight font-extrabold">
+                        Creators should not need five subscriptions to make one
+                        video.
+                    </h2>
+                </div>
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div
+                        v-for="item in [
+                            'Model hopping',
+                            'Surprise monthly bills',
+                            'Separate asset libraries',
+                            'Manual export chaos',
+                        ]"
+                        :key="item"
+                        class="rounded-3xl border border-brand-neutral-900 bg-brand-neutral-100 p-5 font-bold shadow-[3px_3px_0_0_#2e1401]"
+                    >
+                        {{ item }}
                     </div>
                 </div>
             </div>
