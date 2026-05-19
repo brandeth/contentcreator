@@ -16,7 +16,16 @@ import {
     Wand2,
     Zap,
 } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import {
+    computed,
+    nextTick,
+    onBeforeUnmount,
+    onBeforeUpdate,
+    onMounted,
+    ref,
+    watch,
+} from 'vue';
+import type { ComponentPublicInstance } from 'vue';
 import CreatorCarousel from '@/components/CreatorCarousel.vue';
 import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
 import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
@@ -260,6 +269,7 @@ const heroToolDemos = [
 ];
 
 const activeHeroDemo = computed(() => heroToolDemos[activeHeroTool.value]);
+const heroDemoVideos = ref<HTMLVideoElement[]>([]);
 
 const featuredCreators = [
     {
@@ -434,6 +444,32 @@ let pageMounted = false;
 
 const toggleFaq = (index: number) => {
     activeFaqIndex.value = activeFaqIndex.value === index ? null : index;
+};
+
+const setHeroDemoVideoRef = (
+    element: Element | ComponentPublicInstance | null,
+) => {
+    if (element instanceof HTMLVideoElement) {
+        heroDemoVideos.value.push(element);
+    }
+};
+
+const syncHeroDemoVideos = async () => {
+    await nextTick();
+
+    heroDemoVideos.value.forEach((video) => {
+        const tabIndex = Number(video.dataset.heroTabIndex);
+
+        if (tabIndex === activeHeroTool.value) {
+            void video.play().catch(() => {
+                // Muted autoplay can still be denied; retry on the next tab change.
+            });
+
+            return;
+        }
+
+        video.pause();
+    });
 };
 
 const revealPricingSection = () => {
@@ -665,6 +701,7 @@ const animateHero = async () => {
 onMounted(() => {
     pageMounted = true;
     void animateHero();
+    void syncHeroDemoVideos();
 
     if (prefersReducedMotion()) {
         revealToolsSection();
@@ -704,6 +741,14 @@ onMounted(() => {
     if (pricingSection.value) {
         pricingObserver.observe(pricingSection.value);
     }
+});
+
+onBeforeUpdate(() => {
+    heroDemoVideos.value = [];
+});
+
+watch(activeHeroTool, () => {
+    void syncHeroDemoVideos();
 });
 
 onBeforeUnmount(() => {
@@ -948,87 +993,112 @@ onBeforeUnmount(() => {
                                 </aside>
 
                                 <div class="space-y-3 xl:space-y-4">
-                                    <div
-                                        class="hero-demo-entrance-group grid gap-2 sm:grid-cols-2 xl:gap-3"
+                                    <template
+                                        v-for="(
+                                            demo, demoIndex
+                                        ) in heroToolDemos"
+                                        :key="demo.tabTitle"
                                     >
-                                        <a
-                                            v-for="card in activeHeroDemo.cards"
-                                            :key="card.title"
-                                            :href="card.url"
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            :style="
-                                                card.mediaType === 'image' &&
-                                                card.url
-                                                    ? {
-                                                          backgroundImage: `url('${card.url}'), linear-gradient(135deg, #92adeb, #47d9c9 58%, #2e1401)`,
-                                                      }
-                                                    : undefined
+                                        <div
+                                            :aria-hidden="
+                                                demoIndex !== activeHeroTool
                                             "
-                                            class="hero-demo-entrance-item group relative aspect-4/5 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
+                                            :class="[
+                                                demoIndex === activeHeroTool
+                                                    ? 'grid'
+                                                    : 'hidden',
+                                                'hero-demo-entrance-group gap-2 sm:grid-cols-2 xl:gap-3',
+                                            ]"
                                         >
-                                            <video
-                                                v-if="
-                                                    card.mediaType ===
-                                                        'video' && card.url
+                                            <a
+                                                v-for="card in demo.cards"
+                                                :key="card.title"
+                                                :href="card.url"
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                :tabindex="
+                                                    demoIndex ===
+                                                    activeHeroTool
+                                                        ? undefined
+                                                        : -1
                                                 "
-                                                class="absolute inset-0 size-full object-cover"
-                                                :src="card.url"
-                                                autoplay
-                                                muted
-                                                loop
-                                                playsinline
-                                                preload="metadata"
-                                            />
-                                            <div
-                                                class="absolute inset-0 bg-linear-to-t from-brand-neutral-900/85 via-brand-neutral-900/25 to-transparent transition group-hover:from-brand-neutral-900/70"
-                                            />
-                                            <div
-                                                class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-1.5 p-3 xl:p-4"
+                                                :style="
+                                                    card.mediaType ===
+                                                        'image' && card.url
+                                                        ? {
+                                                              backgroundImage: `url('${card.url}'), linear-gradient(135deg, #92adeb, #47d9c9 58%, #2e1401)`,
+                                                          }
+                                                        : undefined
+                                                "
+                                                class="hero-demo-entrance-item group relative aspect-4/5 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
                                             >
+                                                <video
+                                                    v-if="
+                                                        card.mediaType ===
+                                                            'video' && card.url
+                                                    "
+                                                    :ref="setHeroDemoVideoRef"
+                                                    class="absolute inset-0 size-full object-cover"
+                                                    :data-hero-tab-index="
+                                                        demoIndex
+                                                    "
+                                                    :src="card.url"
+                                                    autoplay
+                                                    muted
+                                                    loop
+                                                    playsinline
+                                                    preload="auto"
+                                                />
                                                 <div
-                                                    class="inline-flex max-w-full overflow-hidden rounded-full bg-white px-2 py-1 text-[0.65rem] leading-tight font-bold text-ellipsis whitespace-nowrap text-brand-neutral-900 xl:max-w-[calc(100%-2.5rem)] xl:px-2.5 xl:text-[0.7rem]"
+                                                    class="absolute inset-0 bg-linear-to-t from-brand-neutral-900/85 via-brand-neutral-900/25 to-transparent transition group-hover:from-brand-neutral-900/70"
+                                                />
+                                                <div
+                                                    class="absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-1.5 p-3 xl:p-4"
                                                 >
-                                                    <span class="xl:hidden">
-                                                        {{
-                                                            card.shortLabel ??
-                                                            card.label
-                                                        }}
-                                                    </span>
-                                                    <span
-                                                        class="hidden xl:inline"
+                                                    <div
+                                                        class="inline-flex max-w-full overflow-hidden rounded-full bg-white px-2 py-1 text-[0.65rem] leading-tight font-bold text-ellipsis whitespace-nowrap text-brand-neutral-900 xl:max-w-[calc(100%-2.5rem)] xl:px-2.5 xl:text-[0.7rem]"
                                                     >
-                                                        {{ card.label }}
+                                                        <span class="xl:hidden">
+                                                            {{
+                                                                card.shortLabel ??
+                                                                card.label
+                                                            }}
+                                                        </span>
+                                                        <span
+                                                            class="hidden xl:inline"
+                                                        >
+                                                            {{ card.label }}
+                                                        </span>
+                                                    </div>
+                                                    <span
+                                                        class="hidden size-8 shrink-0 place-items-center rounded-full bg-white/20 text-white backdrop-blur xl:grid"
+                                                    >
+                                                        <Play
+                                                            v-if="
+                                                                card.mediaType ===
+                                                                'video'
+                                                            "
+                                                            class="size-3.5 fill-current xl:size-4"
+                                                        />
+                                                        <component
+                                                            :is="Image"
+                                                            v-else
+                                                            class="size-3.5 xl:size-4"
+                                                        />
                                                     </span>
                                                 </div>
-                                                <span
-                                                    class="hidden size-8 shrink-0 place-items-center rounded-full bg-white/20 text-white backdrop-blur xl:grid"
-                                                >
-                                                    <Play
-                                                        v-if="
-                                                            card.mediaType ===
-                                                            'video'
-                                                        "
-                                                        class="size-3.5 fill-current xl:size-4"
-                                                    />
-                                                    <component
-                                                        :is="Image"
-                                                        v-else
-                                                        class="size-3.5 xl:size-4"
-                                                    />
-                                                </span>
-                                            </div>
-                                            <div
-                                                class="absolute inset-x-0 bottom-0 z-10 p-3 xl:p-4"
-                                            >
                                                 <div
-                                                    class="max-w-44 text-lg leading-tight font-extrabold sm:text-xl xl:text-2xl"
+                                                    class="absolute inset-x-0 bottom-0 z-10 p-3 xl:p-4"
                                                 >
-                                                    {{ card.title }}
+                                                    <div
+                                                        class="max-w-44 text-lg leading-tight font-extrabold sm:text-xl xl:text-2xl"
+                                                    >
+                                                        {{ card.title }}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </a>
-                                    </div>
+                                            </a>
+                                        </div>
+                                    </template>
 
                                     <div
                                         class="hero-demo-entrance-group rounded-3xl border border-white/10 bg-white p-3 text-brand-neutral-900 xl:p-4"
