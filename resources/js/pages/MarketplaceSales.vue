@@ -421,8 +421,11 @@ const heroSummary = ref<HTMLElement | null>(null);
 const heroActions = ref<HTMLElement | null>(null);
 const heroStats = ref<HTMLElement | null>(null);
 const heroDemoPanel = ref<HTMLElement | null>(null);
+const toolsSection = ref<HTMLElement | null>(null);
+const toolsSectionVisible = ref(false);
 const pricingSection = ref<HTMLElement | null>(null);
 const pricingSectionVisible = ref(false);
+let toolsObserver: IntersectionObserver | null = null;
 let pricingObserver: IntersectionObserver | null = null;
 let heroAnimationContext: { revert: () => void } | null = null;
 let heroTitleSplit: HeroTitleSplit | null = null;
@@ -437,6 +440,12 @@ const revealPricingSection = () => {
     pricingSectionVisible.value = true;
     pricingObserver?.disconnect();
     pricingObserver = null;
+};
+
+const revealToolsSection = () => {
+    toolsSectionVisible.value = true;
+    toolsObserver?.disconnect();
+    toolsObserver = null;
 };
 
 const prefersReducedMotion = () =>
@@ -658,10 +667,23 @@ onMounted(() => {
     void animateHero();
 
     if (prefersReducedMotion()) {
+        revealToolsSection();
         revealPricingSection();
 
         return;
     }
+
+    toolsObserver = new IntersectionObserver(
+        ([entry]) => {
+            if (entry?.isIntersecting) {
+                revealToolsSection();
+            }
+        },
+        {
+            rootMargin: '0px 0px -10% 0px',
+            threshold: 0.2,
+        },
+    );
 
     pricingObserver = new IntersectionObserver(
         ([entry]) => {
@@ -675,6 +697,10 @@ onMounted(() => {
         },
     );
 
+    if (toolsSection.value) {
+        toolsObserver.observe(toolsSection.value);
+    }
+
     if (pricingSection.value) {
         pricingObserver.observe(pricingSection.value);
     }
@@ -685,6 +711,7 @@ onBeforeUnmount(() => {
     heroAnimationContext?.revert();
     heroTitleSplit?.revert();
     heroSummarySplit?.revert();
+    toolsObserver?.disconnect();
     pricingObserver?.disconnect();
 });
 </script>
@@ -1039,12 +1066,19 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section id="tools" class="py-20">
+        <section id="tools" ref="toolsSection" class="py-20">
             <div class="mx-auto max-w-7xl px-5 sm:px-8">
                 <div
                     class="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end"
                 >
-                    <div>
+                    <div
+                        class="transition-all duration-700 ease-out"
+                        :class="
+                            toolsSectionVisible
+                                ? 'translate-y-0 opacity-100'
+                                : 'translate-y-8 opacity-0'
+                        "
+                    >
                         <p
                             class="text-sm font-bold text-brand-blue-600 uppercase"
                         >
@@ -1058,7 +1092,12 @@ onBeforeUnmount(() => {
                         </h2>
                     </div>
                     <p
-                        class="max-w-md text-base leading-7 text-brand-neutral-600"
+                        class="max-w-md text-base leading-7 text-brand-neutral-600 transition-all delay-150 duration-700 ease-out"
+                        :class="
+                            toolsSectionVisible
+                                ? 'translate-y-0 opacity-100'
+                                : 'translate-y-8 opacity-0'
+                        "
                     >
                         Sell the breadth quickly, then let creators recognize
                         their exact workflow in the category cards.
@@ -1066,35 +1105,51 @@ onBeforeUnmount(() => {
                 </div>
 
                 <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <article
-                        v-for="tool in tools"
+                    <div
+                        v-for="(tool, index) in tools"
                         :key="tool.title"
-                        class="rounded-3xl border border-brand-neutral-900 bg-white p-5 shadow-[4px_4px_0_0_#2e1401]"
+                        class="transition-all duration-700 ease-out"
+                        :class="
+                            toolsSectionVisible
+                                ? 'translate-y-0 opacity-100'
+                                : 'translate-y-10 opacity-0'
+                        "
+                        :style="{
+                            transitionDelay: toolsSectionVisible
+                                ? `${220 + index * 90}ms`
+                                : '0ms',
+                        }"
                     >
-                        <span
-                            :class="[
-                                'mb-6 grid size-12 place-items-center rounded-2xl border border-brand-neutral-900',
-                                tool.tint,
-                            ]"
+                        <article
+                            class="h-full rounded-3xl border border-brand-neutral-900 bg-white p-5 shadow-[4px_4px_0_0_#2e1401] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[6px_6px_0_0_#2e1401]"
                         >
-                            <component :is="tool.icon" class="size-6" />
-                        </span>
-                        <h3 class="text-xl font-extrabold">{{ tool.title }}</h3>
-                        <p
-                            class="mt-3 min-h-24 text-sm leading-6 text-brand-neutral-600"
-                        >
-                            {{ tool.description }}
-                        </p>
-                        <div class="mt-5 flex flex-wrap gap-2">
                             <span
-                                v-for="item in tool.items"
-                                :key="item"
-                                class="rounded-full bg-brand-neutral-100 px-3 py-1 text-xs font-bold text-brand-neutral-600"
+                                :class="[
+                                    'mb-6 grid size-12 place-items-center rounded-2xl border border-brand-neutral-900',
+                                    tool.tint,
+                                ]"
                             >
-                                {{ item }}
+                                <component :is="tool.icon" class="size-6" />
                             </span>
-                        </div>
-                    </article>
+                            <h3 class="text-xl font-extrabold">
+                                {{ tool.title }}
+                            </h3>
+                            <p
+                                class="mt-3 min-h-24 text-sm leading-6 text-brand-neutral-600"
+                            >
+                                {{ tool.description }}
+                            </p>
+                            <div class="mt-5 flex flex-wrap gap-2">
+                                <span
+                                    v-for="item in tool.items"
+                                    :key="item"
+                                    class="rounded-full bg-brand-neutral-100 px-3 py-1 text-xs font-bold text-brand-neutral-600"
+                                >
+                                    {{ item }}
+                                </span>
+                            </div>
+                        </article>
+                    </div>
                 </div>
 
                 <div class="mt-16">
