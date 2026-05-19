@@ -1140,35 +1140,25 @@ onBeforeUnmount(() => {
                                 </aside>
 
                                 <div class="space-y-3 xl:space-y-4">
-                                    <template
-                                        v-for="(
-                                            demo, demoIndex
-                                        ) in heroToolDemos"
-                                        :key="demo.tabTitle"
+                                    <Transition
+                                        mode="out-in"
+                                        enter-active-class="transition-[opacity,translate,scale] duration-300 ease-out motion-reduce:transition-none"
+                                        enter-from-class="translate-y-3 scale-[0.98] opacity-0"
+                                        enter-to-class="translate-y-0 scale-100 opacity-100"
+                                        leave-active-class="transition-[opacity,translate,scale] duration-200 ease-in motion-reduce:transition-none"
+                                        leave-from-class="translate-y-0 scale-100 opacity-100"
+                                        leave-to-class="-translate-y-2 scale-[0.98] opacity-0"
                                     >
                                         <div
-                                            :aria-hidden="
-                                                demoIndex !== activeHeroTool
-                                            "
-                                            :class="[
-                                                demoIndex === activeHeroTool
-                                                    ? 'grid'
-                                                    : 'hidden',
-                                                'hero-demo-entrance-group gap-2 sm:grid-cols-2 xl:gap-3',
-                                            ]"
+                                            :key="`${activeHeroDemo.tabTitle}-cards`"
+                                            class="hero-demo-entrance-group grid gap-2 sm:grid-cols-2 xl:gap-3"
                                         >
                                             <a
-                                                v-for="card in demo.cards"
+                                                v-for="card in activeHeroDemo.cards"
                                                 :key="card.title"
                                                 :href="card.url"
                                                 target="_blank"
                                                 rel="noreferrer"
-                                                :tabindex="
-                                                    demoIndex ===
-                                                    activeHeroTool
-                                                        ? undefined
-                                                        : -1
-                                                "
                                                 :style="
                                                     card.mediaType ===
                                                         'image' && card.url
@@ -1187,7 +1177,7 @@ onBeforeUnmount(() => {
                                                     :ref="setHeroDemoVideoRef"
                                                     class="absolute inset-0 size-full object-cover"
                                                     :data-hero-tab-index="
-                                                        demoIndex
+                                                        activeHeroTool
                                                     "
                                                     :src="card.url"
                                                     autoplay
@@ -1245,36 +1235,47 @@ onBeforeUnmount(() => {
                                                 </div>
                                             </a>
                                         </div>
-                                    </template>
+                                    </Transition>
 
-                                    <div
-                                        class="hero-demo-entrance-group rounded-3xl border border-white/10 bg-white p-3 text-brand-neutral-900 xl:p-4"
+                                    <Transition
+                                        mode="out-in"
+                                        enter-active-class="transition-[opacity,translate] duration-300 ease-out motion-reduce:transition-none"
+                                        enter-from-class="translate-y-2 opacity-0"
+                                        enter-to-class="translate-y-0 opacity-100"
+                                        leave-active-class="transition-[opacity,translate] duration-150 ease-in motion-reduce:transition-none"
+                                        leave-from-class="translate-y-0 opacity-100"
+                                        leave-to-class="-translate-y-1 opacity-0"
                                     >
                                         <div
-                                            class="mb-3 flex items-center justify-between"
+                                            :key="`${activeHeroDemo.tabTitle}-queue`"
+                                            class="hero-demo-entrance-group rounded-3xl border border-white/10 bg-white p-3 text-brand-neutral-900 xl:p-4"
                                         >
                                             <div
-                                                class="text-sm font-extrabold xl:text-base"
+                                                class="mb-3 flex items-center justify-between"
                                             >
-                                                Generation queue
+                                                <div
+                                                    class="text-sm font-extrabold xl:text-base"
+                                                >
+                                                    Generation queue
+                                                </div>
+                                                <div
+                                                    class="text-[0.65rem] font-semibold text-brand-neutral-600 xl:text-xs"
+                                                >
+                                                    {{ activeHeroDemo.running }}
+                                                </div>
                                             </div>
-                                            <div
-                                                class="text-[0.65rem] font-semibold text-brand-neutral-600 xl:text-xs"
-                                            >
-                                                {{ activeHeroDemo.running }}
+                                            <div class="space-y-2">
+                                                <div
+                                                    v-for="bar in activeHeroDemo.bars"
+                                                    :key="bar"
+                                                    :class="[
+                                                        'h-2.5 rounded-full transition-all xl:h-3',
+                                                        bar,
+                                                    ]"
+                                                />
                                             </div>
                                         </div>
-                                        <div class="space-y-2">
-                                            <div
-                                                v-for="bar in activeHeroDemo.bars"
-                                                :key="bar"
-                                                :class="[
-                                                    'h-2.5 rounded-full transition-all xl:h-3',
-                                                    bar,
-                                                ]"
-                                            />
-                                        </div>
-                                    </div>
+                                    </Transition>
                                 </div>
                             </div>
                         </div>
