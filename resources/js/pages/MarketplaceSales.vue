@@ -28,6 +28,7 @@ import {
 import type { ComponentPublicInstance } from 'vue';
 import CreatorCarousel from '@/components/CreatorCarousel.vue';
 import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
+import ModelMarqueeShowcase from '@/components/ModelMarqueeShowcase.vue';
 import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
 
 const tools = [
@@ -2049,6 +2050,8 @@ onBeforeUnmount(() => {
                 </div>
             </div>
         </section>
+
+        <ModelMarqueeShowcase :items="bentoItems" />
 
         <section id="faq" class="py-20">
             <div
