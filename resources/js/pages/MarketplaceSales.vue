@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import CreatorCarousel from '@/components/CreatorCarousel.vue';
-import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
-import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
 import { Head, Link } from '@inertiajs/vue3';
 import {
     ArrowRight,
@@ -19,7 +16,10 @@ import {
     Wand2,
     Zap,
 } from 'lucide-vue-next';
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import CreatorCarousel from '@/components/CreatorCarousel.vue';
+import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
+import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
 
 const tools = [
     {
@@ -369,6 +369,12 @@ const stats = [
     { value: '0', label: 'required subscriptions' },
 ];
 
+type HeroTitleSplit = {
+    words: Element[];
+    lines?: Element[];
+    revert: () => void;
+};
+
 const testimonials = [
     {
         quote: 'My videos would not look half as good without the templates. I lean on them for every edit.',
@@ -408,9 +414,20 @@ const faqs = [
 ];
 
 const activeFaqIndex = ref<number | null>(0);
+const heroSection = ref<HTMLElement | null>(null);
+const heroEyebrow = ref<HTMLElement | null>(null);
+const heroTitle = ref<HTMLElement | null>(null);
+const heroSummary = ref<HTMLElement | null>(null);
+const heroActions = ref<HTMLElement | null>(null);
+const heroStats = ref<HTMLElement | null>(null);
+const heroDemoPanel = ref<HTMLElement | null>(null);
 const pricingSection = ref<HTMLElement | null>(null);
 const pricingSectionVisible = ref(false);
 let pricingObserver: IntersectionObserver | null = null;
+let heroAnimationContext: { revert: () => void } | null = null;
+let heroTitleSplit: HeroTitleSplit | null = null;
+let heroSummarySplit: HeroTitleSplit | null = null;
+let pageMounted = false;
 
 const toggleFaq = (index: number) => {
     activeFaqIndex.value = activeFaqIndex.value === index ? null : index;
@@ -422,9 +439,227 @@ const revealPricingSection = () => {
     pricingObserver = null;
 };
 
+const prefersReducedMotion = () =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const revealHeroImmediately = () => {
+    heroEyebrow.value?.classList.remove('opacity-0');
+    heroTitle.value?.classList.remove('opacity-0');
+    heroSummary.value?.classList.remove('opacity-0');
+    heroActions.value?.classList.remove('opacity-0');
+    heroStats.value?.classList.remove('opacity-0');
+    heroDemoPanel.value?.classList.remove('opacity-0');
+};
+
+const animateHero = async () => {
+    if (prefersReducedMotion()) {
+        revealHeroImmediately();
+
+        return;
+    }
+
+    await Promise.all([document.fonts?.ready ?? Promise.resolve(), nextTick()]);
+
+    if (!pageMounted || !heroSection.value || !heroTitle.value) {
+        return;
+    }
+
+    const [{ gsap }, { SplitText }] = await Promise.all([
+        import('gsap'),
+        import('gsap/SplitText'),
+    ]);
+
+    if (!pageMounted || !heroSection.value || !heroTitle.value) {
+        return;
+    }
+
+    gsap.registerPlugin(SplitText);
+
+    heroAnimationContext = gsap.context(() => {
+        const title = heroTitle.value;
+        const eyebrow = heroEyebrow.value;
+        const summary = heroSummary.value;
+        const actions = heroActions.value;
+        const statsPanel = heroStats.value;
+        const panel = heroDemoPanel.value;
+
+        if (
+            !title ||
+            !eyebrow ||
+            !summary ||
+            !actions ||
+            !statsPanel ||
+            !panel
+        ) {
+            return;
+        }
+
+        const actionItems = Array.from(
+            actions.querySelectorAll<HTMLElement>('.hero-action-item'),
+        );
+        const statItems = Array.from(
+            statsPanel.querySelectorAll<HTMLElement>('.hero-stat-item'),
+        );
+        const demoItems = Array.from(
+            panel.querySelectorAll<HTMLElement>('.hero-demo-entrance-item'),
+        );
+        const clearDemoAnimationProps = () => {
+            actions.classList.remove('opacity-0');
+            gsap.set(
+                [
+                    eyebrow,
+                    title,
+                    summary,
+                    actions,
+                    ...actionItems,
+                    statsPanel,
+                    ...statItems,
+                    panel,
+                    ...demoItems,
+                ],
+                {
+                    clearProps: 'opacity,visibility,transform',
+                },
+            );
+        };
+
+        heroEyebrow.value?.classList.remove('opacity-0');
+        heroTitle.value?.classList.remove('opacity-0');
+        heroSummary.value?.classList.remove('opacity-0');
+        heroStats.value?.classList.remove('opacity-0');
+        heroDemoPanel.value?.classList.remove('opacity-0');
+        gsap.set([eyebrow, title, summary, statsPanel, panel], {
+            clearProps: 'opacity,visibility,transform',
+        });
+
+        if (
+            actionItems.length > 0 ||
+            statItems.length > 0 ||
+            demoItems.length > 0
+        ) {
+            gsap.set([...actionItems, ...statItems, ...demoItems], {
+                clearProps: 'opacity,visibility,transform',
+            });
+        }
+
+        const titleSplit = SplitText.create(title, {
+            type: 'words',
+            wordsClass: 'hero-title-word word++',
+            ignore: 'sup',
+        });
+        const summarySplit = SplitText.create(summary, {
+            type: 'lines',
+            linesClass: 'hero-summary-line line++',
+        });
+        heroTitleSplit = titleSplit;
+        heroSummarySplit = summarySplit;
+
+        const timeline = gsap.timeline({
+            defaults: { ease: 'power3.out' },
+            onComplete: clearDemoAnimationProps,
+            onInterrupt: clearDemoAnimationProps,
+        });
+
+        timeline
+            .from(
+                panel,
+                {
+                    y: 16,
+                    scale: 0.985,
+                    opacity: 0,
+                    duration: 0.38,
+                },
+                0,
+            )
+            .from(eyebrow, {
+                y: 12,
+                scale: 0.985,
+                opacity: 0,
+                duration: 0.28,
+                ease: 'power2.out',
+            })
+            .from(
+                titleSplit.words,
+                {
+                    y: -100,
+                    opacity: 0,
+                    rotation: 'random(-80, 80)',
+                    stagger: 0.1,
+                    duration: 1,
+                    ease: 'back',
+                },
+                '-=0.06',
+            )
+            .from(
+                summarySplit.lines ?? [],
+                {
+                    y: 14,
+                    opacity: 0,
+                    stagger: 0.045,
+                    duration: 0.34,
+                },
+                '-=0.2',
+            )
+            .set(actions, { opacity: 1 }, '-=0.08')
+            .fromTo(
+                actionItems,
+                {
+                    y: 18,
+                    opacity: 0,
+                    scale: 0.96,
+                },
+                {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    stagger: 0.08,
+                    duration: 0.42,
+                    ease: 'back.out(1.35)',
+                    clearProps: 'opacity,transform',
+                },
+                '-=0.08',
+            )
+            .from(
+                statItems,
+                {
+                    y: 10,
+                    opacity: 0,
+                    stagger: 0.045,
+                    duration: 0.28,
+                },
+                '-=0.12',
+            );
+
+        if (demoItems.length > 0) {
+            timeline.fromTo(
+                demoItems,
+                {
+                    y: 22,
+                    opacity: 0,
+                    visibility: 'hidden',
+                },
+                {
+                    y: 0,
+                    opacity: 1,
+                    visibility: 'visible',
+                    stagger: 0.035,
+                    duration: 0.3,
+                    ease: 'power2.out',
+                    clearProps: 'opacity,visibility,transform',
+                },
+                0.08,
+            );
+        }
+    }, heroSection.value);
+};
+
 onMounted(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    pageMounted = true;
+    void animateHero();
+
+    if (prefersReducedMotion()) {
         revealPricingSection();
+
         return;
     }
 
@@ -446,6 +681,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    pageMounted = false;
+    heroAnimationContext?.revert();
+    heroTitleSplit?.revert();
+    heroSummarySplit?.revert();
     pricingObserver?.disconnect();
 });
 </script>
@@ -508,6 +747,7 @@ onBeforeUnmount(() => {
         </header>
 
         <section
+            ref="heroSection"
             class="relative overflow-hidden border-b border-brand-neutral-900/10"
         >
             <div
@@ -515,7 +755,8 @@ onBeforeUnmount(() => {
             >
                 <div class="max-w-2xl">
                     <div
-                        class="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-neutral-900 bg-white px-4 py-2 text-sm font-semibold shadow-[2px_2px_0_0_#2e1401]"
+                        ref="heroEyebrow"
+                        class="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-neutral-900 bg-white px-4 py-2 text-sm font-semibold opacity-0 shadow-[2px_2px_0_0_#2e1401]"
                     >
                         <Star
                             class="size-4 fill-brand-yellow-500 text-brand-neutral-900"
@@ -524,42 +765,52 @@ onBeforeUnmount(() => {
                     </div>
 
                     <h1
-                        class="text-4xl leading-[1.08] font-extrabold tracking-normal text-brand-neutral-900 sm:text-5xl xl:text-6xl"
+                        ref="heroTitle"
+                        class="text-4xl leading-[1.08] font-extrabold tracking-normal text-brand-neutral-900 opacity-0 sm:text-5xl xl:text-6xl"
                     >
                         Create AI content from one place.
                     </h1>
 
                     <p
-                        class="mt-6 max-w-xl text-lg leading-8 text-brand-neutral-600"
+                        ref="heroSummary"
+                        class="mt-6 max-w-xl text-lg leading-8 text-brand-neutral-600 opacity-0"
                     >
                         PromptEdit gives creators access to AI video, image,
                         voiceover, template, audio, and editing tools without
                         juggling tabs, subscriptions, or scattered workflows.
                     </p>
 
-                    <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+                    <div
+                        ref="heroActions"
+                        class="mt-8 flex flex-col gap-3 opacity-0 sm:flex-row"
+                    >
                         <a
                             href="#pricing"
-                            class="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-yellow-500 px-6 py-3 font-bold text-brand-neutral-900 shadow-[inset_0_0_0_1px_#2e1401,3px_3px_0_0_#2e1401] transition hover:shadow-[inset_0_0_0_1px_#2e1401,5px_5px_0_0_#2e1401]"
+                            class="hero-action-item inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-brand-yellow-500 px-6 py-3 font-bold text-brand-neutral-900 shadow-[inset_0_0_0_1px_#2e1401,3px_3px_0_0_#2e1401] transition hover:shadow-[inset_0_0_0_1px_#2e1401,5px_5px_0_0_#2e1401]"
                         >
                             Get started today
                             <ArrowRight class="size-5" />
                         </a>
                         <a
                             href="#tools"
-                            class="inline-flex min-h-12 items-center justify-center rounded-full border border-brand-neutral-900 bg-white px-6 py-3 font-bold text-brand-neutral-900 transition hover:bg-brand-neutral-100"
+                            class="hero-action-item inline-flex min-h-12 items-center justify-center rounded-full border border-brand-neutral-900 bg-white px-6 py-3 font-bold text-brand-neutral-900 transition hover:bg-brand-neutral-100"
                         >
                             Explore the marketplace
                         </a>
                     </div>
 
-                    <div class="mt-10 grid max-w-xl grid-cols-3 gap-3">
+                    <div
+                        ref="heroStats"
+                        class="mt-10 grid max-w-xl grid-cols-3 gap-3 opacity-0"
+                    >
                         <div
                             v-for="stat in stats"
                             :key="stat.label"
-                            class="border-l border-brand-neutral-900/20 pl-4"
+                            class="hero-stat-item border-l border-brand-neutral-900/20 pl-4"
                         >
-                            <div class="text-2xl font-extrabold">
+                            <div
+                                class="hero-stat-value text-2xl font-extrabold"
+                            >
                                 {{ stat.value }}
                             </div>
                             <div
@@ -571,7 +822,7 @@ onBeforeUnmount(() => {
                     </div>
                 </div>
 
-                <div class="relative">
+                <div ref="heroDemoPanel" class="relative opacity-0">
                     <div
                         class="rounded-4xl border border-brand-neutral-900 bg-white p-3 shadow-[8px_8px_0_0_#2e1401]"
                     >
@@ -579,21 +830,21 @@ onBeforeUnmount(() => {
                             class="overflow-hidden rounded-[1.4rem] border border-brand-neutral-900 bg-brand-neutral-900 text-white"
                         >
                             <div
-                                class="flex items-center justify-between border-b border-white/15 px-4 py-3"
+                                class="hero-demo-entrance-group flex items-center justify-between border-b border-white/15 px-4 py-3"
                             >
                                 <div class="flex items-center gap-2">
                                     <span
-                                        class="size-3 rounded-full bg-brand-pink-400"
+                                        class="hero-demo-entrance-item size-3 rounded-full bg-brand-pink-400"
                                     />
                                     <span
-                                        class="size-3 rounded-full bg-brand-yellow-500"
+                                        class="hero-demo-entrance-item size-3 rounded-full bg-brand-yellow-500"
                                     />
                                     <span
-                                        class="size-3 rounded-full bg-brand-teal-400"
+                                        class="hero-demo-entrance-item size-3 rounded-full bg-brand-teal-400"
                                     />
                                 </div>
                                 <div
-                                    class="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold"
+                                    class="hero-demo-entrance-item rounded-full bg-white/10 px-3 py-1 text-xs font-semibold"
                                 >
                                     2,450 credits
                                 </div>
@@ -602,9 +853,11 @@ onBeforeUnmount(() => {
                             <div
                                 class="grid gap-4 p-4 md:grid-cols-[0.48fr_1fr]"
                             >
-                                <aside class="rounded-2xl bg-white/8 p-3">
+                                <aside
+                                    class="hero-demo-entrance-group rounded-2xl bg-white/8 p-3"
+                                >
                                     <div
-                                        class="mb-3 flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs leading-snug font-semibold text-brand-neutral-900"
+                                        class="hero-demo-entrance-item mb-3 flex items-center gap-2 rounded-full bg-white px-3 py-2 text-xs leading-snug font-semibold text-brand-neutral-900"
                                     >
                                         <Search class="size-3.5 shrink-0" />
                                         {{ activeHeroDemo.search }}
@@ -620,6 +873,7 @@ onBeforeUnmount(() => {
                                             "
                                             :class="[
                                                 'w-full rounded-2xl border p-3 text-left transition focus:ring-2 focus:ring-white/70 focus:outline-none',
+                                                'hero-demo-entrance-item',
                                                 activeHeroDemo.tabTitle ===
                                                 tool.title
                                                     ? 'border-white/25 bg-white/16 shadow-[inset_0_0_0_1px_rgba(255,255,255,.12)]'
@@ -668,7 +922,7 @@ onBeforeUnmount(() => {
 
                                 <div class="space-y-3 xl:space-y-4">
                                     <div
-                                        class="grid gap-2 sm:grid-cols-2 xl:gap-3"
+                                        class="hero-demo-entrance-group grid gap-2 sm:grid-cols-2 xl:gap-3"
                                     >
                                         <a
                                             v-for="card in activeHeroDemo.cards"
@@ -684,7 +938,7 @@ onBeforeUnmount(() => {
                                                       }
                                                     : undefined
                                             "
-                                            class="group relative aspect-4/5 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
+                                            class="hero-demo-entrance-item group relative aspect-4/5 overflow-hidden rounded-3xl bg-[linear-gradient(135deg,#92adeb,#47d9c9)] bg-cover bg-center shadow-[inset_0_0_0_1px_rgba(255,255,255,.08)] transition hover:-translate-y-0.5 focus:ring-2 focus:ring-white/70 focus:outline-none"
                                         >
                                             <video
                                                 v-if="
@@ -750,7 +1004,7 @@ onBeforeUnmount(() => {
                                     </div>
 
                                     <div
-                                        class="rounded-3xl border border-white/10 bg-white p-3 text-brand-neutral-900 xl:p-4"
+                                        class="hero-demo-entrance-group rounded-3xl border border-white/10 bg-white p-3 text-brand-neutral-900 xl:p-4"
                                     >
                                         <div
                                             class="mb-3 flex items-center justify-between"

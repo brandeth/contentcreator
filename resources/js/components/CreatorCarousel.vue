@@ -132,6 +132,7 @@ const moveMobileCreatorCard = async (
 const handleMobileCardClick = async (index: number) => {
     if (index === mobileActiveIndex.value) {
         openCreatorDetails(visibleCreators.value[index] ?? null);
+
         return;
     }
 
@@ -184,6 +185,7 @@ const setupMobileCarousel = async () => {
 const handleMobileCarouselQuery = () => {
     if (mobileMediaQuery?.matches) {
         setupMobileCarousel();
+
         return;
     }
 

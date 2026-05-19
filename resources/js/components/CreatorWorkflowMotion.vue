@@ -141,6 +141,7 @@ const createMotionPath = async () => {
 
     if (!section || prefersReducedMotion()) {
         section?.classList.add('is-static');
+
         return;
     }
 

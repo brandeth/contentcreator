@@ -103,6 +103,7 @@ const initializePinnedPanels = async () => {
 
     if (!root || prefersReducedMotion() || !canPinPanels()) {
         root?.classList.add('is-static');
+
         return;
     }
 
