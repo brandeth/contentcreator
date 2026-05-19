@@ -432,12 +432,16 @@ const heroActions = ref<HTMLElement | null>(null);
 const heroStats = ref<HTMLElement | null>(null);
 const heroDemoPanel = ref<HTMLElement | null>(null);
 const toolsSection = ref<HTMLElement | null>(null);
+const bentoGrid = ref<HTMLElement | null>(null);
 const toolsSectionVisible = ref(false);
 const pricingSection = ref<HTMLElement | null>(null);
 const pricingSectionVisible = ref(false);
 let toolsObserver: IntersectionObserver | null = null;
 let pricingObserver: IntersectionObserver | null = null;
+let viewportRevealFrame: number | null = null;
+let viewportRevealTimer: number | null = null;
 let heroAnimationContext: { revert: () => void } | null = null;
+let bentoAnimationContext: { revert: () => void } | null = null;
 let heroTitleSplit: HeroTitleSplit | null = null;
 let heroSummarySplit: HeroTitleSplit | null = null;
 let pageMounted = false;
@@ -482,6 +486,58 @@ const revealToolsSection = () => {
     toolsSectionVisible.value = true;
     toolsObserver?.disconnect();
     toolsObserver = null;
+};
+
+const sectionHasEnteredViewport = (
+    section: HTMLElement | null,
+    revealAtViewportRatio: number,
+) => {
+    if (!section) {
+        return false;
+    }
+
+    const sectionBounds = section.getBoundingClientRect();
+
+    return (
+        sectionBounds.top <= window.innerHeight * revealAtViewportRatio &&
+        sectionBounds.bottom >= 0
+    );
+};
+
+const checkViewportReveals = () => {
+    viewportRevealFrame = null;
+
+    if (
+        !toolsSectionVisible.value &&
+        sectionHasEnteredViewport(toolsSection.value, 0.9)
+    ) {
+        revealToolsSection();
+    }
+
+    if (
+        !pricingSectionVisible.value &&
+        sectionHasEnteredViewport(pricingSection.value, 0.88)
+    ) {
+        revealPricingSection();
+    }
+
+    if (toolsSectionVisible.value && pricingSectionVisible.value) {
+        window.removeEventListener('scroll', scheduleViewportRevealCheck);
+        window.removeEventListener('resize', scheduleViewportRevealCheck);
+
+        if (viewportRevealTimer !== null) {
+            window.clearInterval(viewportRevealTimer);
+            viewportRevealTimer = null;
+        }
+    }
+};
+
+const scheduleViewportRevealCheck = () => {
+    if (viewportRevealFrame !== null) {
+        return;
+    }
+
+    viewportRevealFrame = window.setTimeout(checkViewportReveals);
 };
 
 const prefersReducedMotion = () =>
@@ -698,9 +754,79 @@ const animateHero = async () => {
     }, heroSection.value);
 };
 
+const revealBentoGridImmediately = () => {
+    bentoGrid.value
+        ?.querySelectorAll<HTMLElement>('.marketplace-bento-card')
+        .forEach((card) => {
+            card.style.removeProperty('transform');
+            card.style.removeProperty('transform-origin');
+        });
+};
+
+const animateBentoGrid = async () => {
+    if (prefersReducedMotion()) {
+        revealBentoGridImmediately();
+
+        return;
+    }
+
+    await nextTick();
+
+    if (!pageMounted || !bentoGrid.value) {
+        return;
+    }
+
+    const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+    ]);
+
+    if (!pageMounted || !bentoGrid.value) {
+        return;
+    }
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    bentoAnimationContext = gsap.context(() => {
+        const cards = gsap.utils.toArray<HTMLElement>(
+            '.marketplace-bento-card',
+        );
+
+        if (cards.length === 0) {
+            return;
+        }
+
+        gsap.set(cards, {
+            y: 18,
+            scale: 0.92,
+            transformOrigin: 'center bottom',
+        });
+
+        ScrollTrigger.batch(cards, {
+            start: 'top 85%',
+            interval: 0.1,
+            batchMax: 3,
+            once: true,
+            onEnter: (batch) => {
+                gsap.to(batch, {
+                    y: 0,
+                    scale: 1,
+                    stagger: 0.08,
+                    duration: 0.55,
+                    ease: 'back.out(1.25)',
+                    clearProps: 'transform,transformOrigin',
+                });
+            },
+        });
+
+        ScrollTrigger.refresh();
+    }, bentoGrid.value);
+};
+
 onMounted(() => {
     pageMounted = true;
     void animateHero();
+    void animateBentoGrid();
     void syncHeroDemoVideos();
 
     if (prefersReducedMotion()) {
@@ -718,7 +844,7 @@ onMounted(() => {
         },
         {
             rootMargin: '0px 0px -10% 0px',
-            threshold: 0.2,
+            threshold: 0.01,
         },
     );
 
@@ -730,7 +856,7 @@ onMounted(() => {
         },
         {
             rootMargin: '0px 0px -12% 0px',
-            threshold: 0.25,
+            threshold: 0.01,
         },
     );
 
@@ -741,6 +867,16 @@ onMounted(() => {
     if (pricingSection.value) {
         pricingObserver.observe(pricingSection.value);
     }
+
+    window.addEventListener('scroll', scheduleViewportRevealCheck, {
+        passive: true,
+    });
+    window.addEventListener('resize', scheduleViewportRevealCheck);
+    viewportRevealTimer = window.setInterval(scheduleViewportRevealCheck, 150);
+
+    void nextTick(() => {
+        scheduleViewportRevealCheck();
+    });
 });
 
 onBeforeUpdate(() => {
@@ -754,10 +890,21 @@ watch(activeHeroTool, () => {
 onBeforeUnmount(() => {
     pageMounted = false;
     heroAnimationContext?.revert();
+    bentoAnimationContext?.revert();
     heroTitleSplit?.revert();
     heroSummarySplit?.revert();
     toolsObserver?.disconnect();
     pricingObserver?.disconnect();
+    window.removeEventListener('scroll', scheduleViewportRevealCheck);
+    window.removeEventListener('resize', scheduleViewportRevealCheck);
+
+    if (viewportRevealTimer !== null) {
+        window.clearInterval(viewportRevealTimer);
+    }
+
+    if (viewportRevealFrame !== null) {
+        window.clearTimeout(viewportRevealFrame);
+    }
 });
 </script>
 
@@ -1243,6 +1390,7 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div
+                        ref="bentoGrid"
                         class="grid grid-flow-dense auto-rows-[280px] gap-4 sm:auto-rows-[340px] lg:auto-rows-[170px] lg:grid-cols-12"
                     >
                         <article
@@ -1256,7 +1404,7 @@ onBeforeUnmount(() => {
                                     : undefined
                             "
                             :class="[
-                                'group relative overflow-hidden rounded-[1.5rem] border border-brand-neutral-900 shadow-[3px_3px_0_0_#2e1401] transition hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#2e1401]',
+                                'marketplace-bento-card group relative overflow-hidden rounded-[1.5rem] border border-brand-neutral-900 shadow-[3px_3px_0_0_#2e1401] transition hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#2e1401]',
                                 item.imageUrl || item.videoUrl
                                     ? 'flex items-end bg-cover bg-center text-white'
                                     : 'p-5',
