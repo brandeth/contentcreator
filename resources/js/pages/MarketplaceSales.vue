@@ -407,9 +407,14 @@ const faqs = [
     },
 ];
 
+const activeFaqIndex = ref<number | null>(0);
 const pricingSection = ref<HTMLElement | null>(null);
 const pricingSectionVisible = ref(false);
 let pricingObserver: IntersectionObserver | null = null;
+
+const toggleFaq = (index: number) => {
+    activeFaqIndex.value = activeFaqIndex.value === index ? null : index;
+};
 
 const revealPricingSection = () => {
     pricingSectionVisible.value = true;
@@ -1238,7 +1243,7 @@ onBeforeUnmount(() => {
             class="border-b border-brand-neutral-900/10 bg-white py-20"
         >
             <div
-                class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
+                class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 xl:grid-cols-[0.95fr_1.05fr] xl:items-center"
             >
                 <div
                     class="transition-all duration-700 ease-out"
@@ -1275,7 +1280,7 @@ onBeforeUnmount(() => {
                         "
                     >
                         <article
-                            class="h-full rounded-4xl border border-brand-neutral-900 bg-brand-neutral-100 p-6 shadow-[5px_5px_0_0_#2e1401] transition-transform duration-300 ease-out lg:-rotate-1 lg:hover:rotate-0"
+                            class="h-full rounded-4xl border border-brand-neutral-900 bg-brand-neutral-100 p-6 shadow-[5px_5px_0_0_#2e1401] transition-transform duration-300 ease-out xl:-rotate-1 xl:hover:rotate-0"
                         >
                             <Coins class="mb-6 size-8 text-brand-blue-600" />
                             <h3 class="text-2xl font-extrabold">
@@ -1313,7 +1318,7 @@ onBeforeUnmount(() => {
                         "
                     >
                         <article
-                            class="h-full rounded-4xl border border-brand-neutral-900 bg-brand-yellow-500 p-6 shadow-[5px_5px_0_0_#2e1401] transition-transform duration-300 ease-out lg:rotate-1 lg:hover:rotate-0"
+                            class="h-full rounded-4xl border border-brand-neutral-900 bg-brand-yellow-500 p-6 shadow-[5px_5px_0_0_#2e1401] transition-transform duration-300 ease-out xl:rotate-1 xl:hover:rotate-0"
                         >
                             <Sparkles class="mb-6 size-8" />
                             <h3 class="text-2xl font-extrabold">
@@ -1406,26 +1411,28 @@ onBeforeUnmount(() => {
                                 class="flex h-full flex-col rounded-3xl border border-brand-neutral-900 bg-white p-4 shadow-[3px_3px_0_0_#2e1401]"
                             >
                                 <div
-                                    class="flex items-start justify-between gap-3"
+                                    class="flex items-start justify-between gap-2 xl:gap-3"
                                 >
-                                    <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex items-center gap-2 xl:gap-3"
+                                    >
                                         <span
-                                            class="grid size-10 shrink-0 place-items-center rounded-full border border-brand-neutral-900"
+                                            class="grid size-9 shrink-0 place-items-center rounded-full border border-brand-neutral-900 xl:size-10"
                                             :class="item.accent"
                                         >
                                             <component
                                                 :is="item.icon"
-                                                class="size-5"
+                                                class="size-4 xl:size-5"
                                             />
                                         </span>
                                         <p
-                                            class="text-xs font-extrabold uppercase"
+                                            class="text-[0.65rem] leading-tight font-extrabold uppercase xl:text-xs"
                                         >
                                             {{ item.need }}
                                         </p>
                                     </div>
                                     <span
-                                        class="rounded-full border border-brand-neutral-900 bg-brand-neutral-100 px-2.5 py-1 text-[0.65rem] leading-none font-extrabold whitespace-nowrap uppercase"
+                                        class="rounded-full border border-brand-neutral-900 bg-brand-neutral-100 px-1.5 py-1 text-[0.52rem] leading-none font-extrabold whitespace-nowrap uppercase xl:px-2.5 xl:text-[0.65rem]"
                                     >
                                         {{ item.badge }}
                                     </span>
@@ -1528,22 +1535,44 @@ onBeforeUnmount(() => {
                     </h2>
                 </div>
                 <div class="space-y-3">
-                    <details
-                        v-for="faq in faqs"
+                    <article
+                        v-for="(faq, index) in faqs"
                         :key="faq.question"
-                        class="group rounded-3xl border border-brand-neutral-900 bg-white p-5 shadow-[2px_2px_0_0_#2e1401]"
+                        class="overflow-hidden rounded-3xl border border-brand-neutral-900 bg-white shadow-[2px_2px_0_0_#2e1401]"
                     >
-                        <summary
-                            class="cursor-pointer list-none font-extrabold"
+                        <button
+                            type="button"
+                            class="flex w-full cursor-pointer items-center justify-between gap-4 p-5 text-left font-extrabold"
+                            :aria-expanded="activeFaqIndex === index"
+                            :aria-controls="`faq-answer-${index}`"
+                            @click="toggleFaq(index)"
                         >
-                            {{ faq.question }}
-                        </summary>
-                        <p
-                            class="mt-3 text-sm leading-6 text-brand-neutral-600"
+                            <span>{{ faq.question }}</span>
+                            <span
+                                class="flex size-7 shrink-0 items-center justify-center rounded-full border border-brand-neutral-900 text-xl leading-none"
+                                aria-hidden="true"
+                            >
+                                {{ activeFaqIndex === index ? '−' : '+' }}
+                            </span>
+                        </button>
+                        <div
+                            :id="`faq-answer-${index}`"
+                            class="grid transition-[grid-template-rows,opacity] duration-300 ease-out"
+                            :class="
+                                activeFaqIndex === index
+                                    ? 'grid-rows-[1fr] opacity-100'
+                                    : 'grid-rows-[0fr] opacity-0'
+                            "
                         >
-                            {{ faq.answer }}
-                        </p>
-                    </details>
+                            <div class="overflow-hidden">
+                                <p
+                                    class="px-5 pb-5 text-sm leading-6 text-brand-neutral-600"
+                                >
+                                    {{ faq.answer }}
+                                </p>
+                            </div>
+                        </div>
+                    </article>
                 </div>
             </div>
         </section>

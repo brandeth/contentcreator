@@ -10,6 +10,7 @@ type WorkflowPoint = {
     tiltClass: string;
     labelPositionClass: string;
     labelClass: string;
+    desktopLabelSideClass: string;
 };
 
 const workflowPoints: WorkflowPoint[] = [
@@ -24,6 +25,7 @@ const workflowPoints: WorkflowPoint[] = [
         tiltClass: 'tilt-right',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'right-0 left-auto translate-x-0',
+        desktopLabelSideClass: 'label-left-desktop',
     },
     {
         title: 'Generate',
@@ -35,6 +37,7 @@ const workflowPoints: WorkflowPoint[] = [
         tiltClass: 'tilt-left',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'left-0 translate-x-0',
+        desktopLabelSideClass: 'label-right-desktop',
     },
     {
         title: 'Render',
@@ -47,6 +50,7 @@ const workflowPoints: WorkflowPoint[] = [
         tiltClass: 'tilt-right',
         labelPositionClass: 'top-full mt-3',
         labelClass: 'right-0 left-auto translate-x-0',
+        desktopLabelSideClass: 'label-left-desktop',
     },
     {
         title: 'Organize',
@@ -58,7 +62,8 @@ const workflowPoints: WorkflowPoint[] = [
             'left-1/2 top-[57%] -translate-x-1/2 md:left-[20%] md:translate-x-0',
         tiltClass: 'tilt-left',
         labelPositionClass: 'top-full mt-3',
-        labelClass: 'left-0 translate-x-0 sm:left-1/2 sm:-translate-x-1/2',
+        labelClass: 'left-0 translate-x-0',
+        desktopLabelSideClass: 'label-right-desktop',
     },
     {
         title: 'Package',
@@ -70,6 +75,7 @@ const workflowPoints: WorkflowPoint[] = [
         tiltClass: 'tilt-right',
         labelPositionClass: 'bottom-full mb-3',
         labelClass: 'right-0 left-auto translate-x-0',
+        desktopLabelSideClass: 'label-left-desktop',
     },
     {
         title: 'Publish',
@@ -82,6 +88,7 @@ const workflowPoints: WorkflowPoint[] = [
         tiltClass: 'tilt-left',
         labelPositionClass: 'bottom-full mb-3',
         labelClass: 'left-0 translate-x-0',
+        desktopLabelSideClass: 'label-right-desktop',
     },
 ];
 
@@ -353,6 +360,7 @@ onBeforeUnmount(() => {
                     'creator-workflow-motion__point absolute z-10 flex items-center justify-center',
                     point.positionClass,
                     point.tiltClass,
+                    point.desktopLabelSideClass,
                 ]"
             >
                 <div
@@ -388,20 +396,26 @@ onBeforeUnmount(() => {
 
                 <div
                     :class="[
-                        'creator-workflow-motion__label pointer-events-none absolute w-[min(16rem,72vw)] border border-brand-neutral-0/30 bg-brand-neutral-900/88 p-3 shadow-[3px_3px_0_0_var(--color-brand-neutral-0)] backdrop-blur',
+                        'creator-workflow-motion__label pointer-events-none absolute w-[min(16rem,72vw)] border border-brand-neutral-0/30 bg-brand-neutral-900/88 p-3 shadow-[3px_3px_0_0_var(--color-brand-neutral-0)] backdrop-blur lg:p-4',
                         point.labelPositionClass,
                         point.labelClass,
                     ]"
                 >
                     <div class="flex items-center justify-between gap-3">
-                        <h3 class="text-base leading-tight font-extrabold">
+                        <h3
+                            class="text-base leading-tight font-extrabold lg:text-xl"
+                        >
                             {{ point.title }}
                         </h3>
-                        <span class="text-xs font-extrabold text-white/40">
+                        <span
+                            class="text-xs font-extrabold text-white/40 lg:text-sm"
+                        >
                             0{{ index + 1 }}
                         </span>
                     </div>
-                    <p class="mt-2 text-sm leading-5 text-white/65">
+                    <p
+                        class="mt-2 text-sm leading-5 text-white/65 lg:text-lg lg:leading-7"
+                    >
                         {{ point.text }}
                     </p>
                 </div>
@@ -465,6 +479,18 @@ onBeforeUnmount(() => {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
+    transition:
+        background-color 320ms ease,
+        border-color 320ms ease,
+        box-shadow 320ms ease;
+}
+
+.creator-workflow-motion__label.top-full {
+    margin-top: 1.75rem;
+}
+
+.creator-workflow-motion__label.bottom-full {
+    margin-bottom: 1.75rem;
 }
 
 .creator-workflow-motion__marker {
@@ -501,6 +527,20 @@ onBeforeUnmount(() => {
     filter: saturate(1.08) contrast(1.04);
 }
 
+.creator-workflow-motion__point.is-reached .creator-workflow-motion__label {
+    border-color: var(--color-brand-neutral-900);
+    background-color: var(--color-brand-neutral-0);
+    box-shadow: 6px 6px 0 0 var(--color-brand-neutral-900);
+    color: var(--color-brand-neutral-900);
+}
+
+.creator-workflow-motion__point.is-reached .creator-workflow-motion__label p,
+.creator-workflow-motion__point.is-reached
+    .creator-workflow-motion__label
+    span {
+    color: color-mix(in srgb, var(--color-brand-neutral-900) 72%, transparent);
+}
+
 .creator-workflow-motion__point.is-active.tilt-left
     .creator-workflow-motion__media-card {
     transform: rotate(-8deg) scale(1.02);
@@ -531,9 +571,28 @@ onBeforeUnmount(() => {
     }
 
     .creator-workflow-motion__label {
+        top: 50%;
+        bottom: auto;
         left: auto;
         right: auto;
+        width: min(16rem, 30vw);
+        margin-top: 0;
+        margin-bottom: 0;
         transform: none;
+    }
+
+    .creator-workflow-motion__point.label-left-desktop
+        .creator-workflow-motion__label {
+        right: calc(100% + clamp(2rem, 6vw, 4rem));
+        left: auto;
+        transform: translateY(-50%);
+    }
+
+    .creator-workflow-motion__point.label-right-desktop
+        .creator-workflow-motion__label {
+        right: auto;
+        left: calc(100% + clamp(2rem, 6vw, 4rem));
+        transform: translateY(-50%);
     }
 
     .creator-workflow-motion__asset {
@@ -541,6 +600,26 @@ onBeforeUnmount(() => {
         left: calc(50% - 50px);
         width: 100px;
         height: 100px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .creator-workflow-motion__label {
+        width: min(22rem, 26vw);
+    }
+
+    .creator-workflow-motion__point.label-left-desktop
+        .creator-workflow-motion__label {
+        right: calc(100% + clamp(3rem, 6vw, 6rem));
+        left: auto;
+        transform: translateY(-50%);
+    }
+
+    .creator-workflow-motion__point.label-right-desktop
+        .creator-workflow-motion__label {
+        right: auto;
+        left: calc(100% + clamp(3rem, 6vw, 6rem));
+        transform: translateY(-50%);
     }
 }
 
@@ -612,6 +691,12 @@ onBeforeUnmount(() => {
     .creator-workflow-motion.is-static .creator-workflow-motion__label {
         position: absolute;
         width: min(16rem, 72vw);
+    }
+}
+
+@media (min-width: 1024px) {
+    .creator-workflow-motion.is-static .creator-workflow-motion__label {
+        width: min(22rem, 26vw);
     }
 }
 </style>
