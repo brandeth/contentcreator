@@ -41,6 +41,7 @@ const frontCreator = computed(
     () => creatorCards.value[creatorCards.value.length - 1] ?? null,
 );
 
+const carouselSection = ref<HTMLElement | null>(null);
 const creatorSlider = ref<HTMLElement | null>(null);
 const mobileGallery = ref<HTMLElement | null>(null);
 const mobileDragProxy = ref<HTMLElement | null>(null);
@@ -48,7 +49,14 @@ let activeFlip: { kill: () => void } | null = null;
 let mobileGsapContext: { revert: () => void } | null = null;
 let mobileDraggable: Array<{ kill: () => void }> = [];
 let mobileMediaQuery: MediaQueryList | null = null;
+let revealObserver: IntersectionObserver | null = null;
+let revealTransitionTimer: number | null = null;
+let revealFallbackFrame: number | null = null;
+let revealFallbackTimer: number | null = null;
 let isAnimating = false;
+const isDesktopDeckRevealed = ref(false);
+const isDesktopDeckRevealSettled = ref(false);
+const isMobileDeckRevealed = ref(false);
 const mobileActiveIndex = ref(0);
 
 watch(
@@ -73,7 +81,7 @@ const getWrappedOffset = (
     return ((index - activeIndex + total + midpoint) % total) - midpoint;
 };
 
-const renderMobileCarousel = async (animate = true) => {
+const renderMobileCarousel = async (animate = true, duration = 0.55) => {
     const gallery = mobileGallery.value;
     const total = visibleCreators.value.length;
 
@@ -85,23 +93,46 @@ const renderMobileCarousel = async (animate = true) => {
     const cards = gsap.utils.toArray<HTMLElement>(
         gallery.querySelectorAll('.mobile-creator-card'),
     );
+    const galleryWidth = gallery.getBoundingClientRect().width;
+    const spreadDistance = Math.min(
+        galleryWidth * (galleryWidth < 640 ? 0.56 : 0.34),
+        galleryWidth < 640 ? 230 : 290,
+    );
 
     cards.forEach((card, index) => {
         const offset = getWrappedOffset(index, mobileActiveIndex.value, total);
         const distance = Math.abs(offset);
+        const isRevealed = isMobileDeckRevealed.value;
         const state = {
-            xPercent: -50 + offset * 42,
-            y: distance * 16,
-            rotate: offset * 5,
-            scale: distance === 0 ? 1 : distance === 1 ? 0.82 : 0.68,
-            opacity: distance > 2 ? 0 : distance === 2 ? 0.45 : 1,
+            xPercent: -50,
+            x: isRevealed ? offset * spreadDistance : offset * 8,
+            y: isRevealed ? distance * 18 : distance * 8,
+            rotate: isRevealed ? offset * 4.5 : offset * 1.5,
+            scale: isRevealed
+                ? distance === 0
+                    ? 1
+                    : distance === 1
+                      ? 0.84
+                      : 0.7
+                : distance === 0
+                  ? 1
+                  : 0.92 - distance * 0.04,
+            opacity: isRevealed
+                ? distance > 2
+                    ? 0
+                    : distance === 2
+                      ? 0.48
+                      : 1
+                : distance > 2
+                  ? 0
+                  : 1,
             zIndex: 20 - distance,
         };
 
         if (animate) {
             gsap.to(card, {
                 ...state,
-                duration: 0.55,
+                duration,
                 ease: 'power3.out',
             });
 
@@ -294,6 +325,10 @@ watch(isDetailOpen, (isOpen) => {
 });
 
 const handleCreatorDeckClick = (event: MouseEvent) => {
+    if (!isDesktopDeckRevealed.value) {
+        return;
+    }
+
     if (!(event.target instanceof Element)) {
         return;
     }
@@ -315,23 +350,146 @@ const handleCreatorDeckClick = (event: MouseEvent) => {
     }
 };
 
+const clearRevealFallback = () => {
+    window.removeEventListener('scroll', scheduleDesktopDeckRevealCheck);
+    window.removeEventListener('resize', scheduleDesktopDeckRevealCheck);
+
+    if (revealFallbackFrame !== null) {
+        window.clearTimeout(revealFallbackFrame);
+        revealFallbackFrame = null;
+    }
+
+    if (revealFallbackTimer !== null) {
+        window.clearInterval(revealFallbackTimer);
+        revealFallbackTimer = null;
+    }
+};
+
+const revealDesktopDeck = (settleImmediately = false) => {
+    isDesktopDeckRevealed.value = true;
+    revealObserver?.disconnect();
+    revealObserver = null;
+    clearRevealFallback();
+
+    if (revealTransitionTimer !== null) {
+        window.clearTimeout(revealTransitionTimer);
+    }
+
+    if (settleImmediately) {
+        isDesktopDeckRevealSettled.value = true;
+        isMobileDeckRevealed.value = true;
+        renderMobileCarousel(false);
+        revealTransitionTimer = null;
+
+        return;
+    }
+
+    if (!isMobileDeckRevealed.value) {
+        isMobileDeckRevealed.value = true;
+        renderMobileCarousel(true, 0.9);
+    }
+
+    revealTransitionTimer = window.setTimeout(() => {
+        isDesktopDeckRevealSettled.value = true;
+        revealTransitionTimer = null;
+    }, 1300);
+};
+
+function sectionIsInRevealRange(section: HTMLElement | null): boolean {
+    if (!section) {
+        return false;
+    }
+
+    const sectionBounds = section.getBoundingClientRect();
+
+    return (
+        sectionBounds.top <= window.innerHeight * 0.82 &&
+        sectionBounds.bottom >= window.innerHeight * 0.18
+    );
+}
+
+function checkDesktopDeckReveal() {
+    revealFallbackFrame = null;
+
+    if (isDesktopDeckRevealed.value) {
+        clearRevealFallback();
+
+        return;
+    }
+
+    if (sectionIsInRevealRange(carouselSection.value)) {
+        revealDesktopDeck();
+    }
+}
+
+function scheduleDesktopDeckRevealCheck() {
+    if (revealFallbackFrame !== null) {
+        return;
+    }
+
+    revealFallbackFrame = window.setTimeout(checkDesktopDeckReveal, 50);
+}
+
 onMounted(() => {
     creatorSlider.value?.addEventListener('click', handleCreatorDeckClick);
     mobileMediaQuery = window.matchMedia('(max-width: 1023px)');
     mobileMediaQuery.addEventListener('change', handleMobileCarouselQuery);
     handleMobileCarouselQuery();
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        revealDesktopDeck(true);
+
+        return;
+    }
+
+    if ('IntersectionObserver' in window) {
+        revealObserver = new IntersectionObserver(
+            ([entry]) => {
+                if (entry?.isIntersecting) {
+                    revealDesktopDeck();
+                }
+            },
+            {
+                rootMargin: '0px 0px -18% 0px',
+                threshold: 0.2,
+            },
+        );
+
+        if (carouselSection.value) {
+            revealObserver.observe(carouselSection.value);
+        }
+    }
+
+    window.addEventListener('scroll', scheduleDesktopDeckRevealCheck, {
+        passive: true,
+    });
+    window.addEventListener('resize', scheduleDesktopDeckRevealCheck);
+    revealFallbackTimer = window.setInterval(
+        scheduleDesktopDeckRevealCheck,
+        150,
+    );
+    scheduleDesktopDeckRevealCheck();
 });
 
 onBeforeUnmount(() => {
     creatorSlider.value?.removeEventListener('click', handleCreatorDeckClick);
     mobileMediaQuery?.removeEventListener('change', handleMobileCarouselQuery);
+    revealObserver?.disconnect();
+    clearRevealFallback();
     teardownMobileCarousel();
     activeFlip?.kill();
+
+    if (revealTransitionTimer !== null) {
+        window.clearTimeout(revealTransitionTimer);
+    }
 });
 </script>
 
 <template>
-    <section class="overflow-hidden bg-brand-neutral-900 py-20 text-white">
+    <section
+        ref="carouselSection"
+        class="overflow-hidden bg-brand-neutral-900 py-20 text-white"
+    >
         <div
             class="mx-auto grid max-w-7xl gap-10 px-5 sm:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center"
         >
@@ -349,7 +507,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-                class="relative -mx-5 h-136 overflow-hidden sm:-mx-8 lg:hidden"
+                class="relative -mx-5 h-[40rem] overflow-hidden sm:-mx-8 sm:h-[37rem] lg:hidden"
             >
                 <div ref="mobileGallery" class="mobile-creator-gallery">
                     <article
@@ -442,7 +600,14 @@ onBeforeUnmount(() => {
                     <ChevronLeft class="size-5" />
                 </button>
 
-                <div ref="creatorSlider" class="creator-slider">
+                <div
+                    ref="creatorSlider"
+                    class="creator-slider"
+                    :class="{
+                        'is-deck-revealed': isDesktopDeckRevealed,
+                        'is-deck-reveal-settled': isDesktopDeckRevealSettled,
+                    }"
+                >
                     <article
                         v-for="(creator, index) in creatorCards"
                         :key="creator.name"
@@ -832,7 +997,7 @@ onBeforeUnmount(() => {
     position: absolute;
     top: 1.5rem;
     inset-inline: 0;
-    height: 26rem;
+    height: min(31rem, calc(100dvh - 10.5rem));
     touch-action: pan-y;
 }
 
@@ -840,8 +1005,8 @@ onBeforeUnmount(() => {
     position: absolute;
     top: 0;
     left: 50%;
-    width: min(15.5rem, 68vw);
-    height: 26rem;
+    width: clamp(16rem, 78vw, 19rem);
+    height: min(31rem, calc(100dvh - 10.5rem));
     cursor: grab;
     will-change: transform, opacity;
 }
@@ -874,31 +1039,6 @@ onBeforeUnmount(() => {
     aspect-ratio: 2 / 3;
     background: transparent;
     cursor: pointer;
-}
-
-.creator-card:nth-child(5) {
-    left: 0;
-    top: 0;
-}
-
-.creator-card:nth-child(4) {
-    left: 20px;
-    top: -20px;
-}
-
-.creator-card:nth-child(3) {
-    left: 40px;
-    top: -40px;
-}
-
-.creator-card:nth-child(2) {
-    left: 60px;
-    top: -60px;
-}
-
-.creator-card:nth-child(1) {
-    left: 80px;
-    top: -80px;
 }
 
 .creator-detail-flip-shell {
@@ -934,5 +1074,68 @@ onBeforeUnmount(() => {
 
 .creator-detail-flip-face-back {
     transform: rotateY(180deg);
+}
+
+@media (min-width: 1024px) {
+    .creator-card {
+        left: 0;
+        top: 0;
+        opacity: 0;
+        transition:
+            top 900ms cubic-bezier(0.18, 0.9, 0.2, 1),
+            left 900ms cubic-bezier(0.18, 0.9, 0.2, 1),
+            opacity 520ms ease-out;
+        will-change: top, left, opacity;
+    }
+
+    .creator-card:nth-child(5) {
+        opacity: 1;
+    }
+
+    .creator-slider.is-deck-revealed .creator-card {
+        opacity: 1;
+    }
+
+    .creator-slider.is-deck-revealed .creator-card:nth-child(5) {
+        left: 0;
+        top: 0;
+        transition-delay: 0ms;
+    }
+
+    .creator-slider.is-deck-revealed .creator-card:nth-child(4) {
+        left: 20px;
+        top: -20px;
+        transition-delay: 80ms;
+    }
+
+    .creator-slider.is-deck-revealed .creator-card:nth-child(3) {
+        left: 40px;
+        top: -40px;
+        transition-delay: 160ms;
+    }
+
+    .creator-slider.is-deck-revealed .creator-card:nth-child(2) {
+        left: 60px;
+        top: -60px;
+        transition-delay: 240ms;
+    }
+
+    .creator-slider.is-deck-revealed .creator-card:nth-child(1) {
+        left: 80px;
+        top: -80px;
+        transition-delay: 320ms;
+    }
+
+    .creator-slider.is-deck-reveal-settled .creator-card {
+        transition: none;
+        transition-delay: 0ms;
+        will-change: auto;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .creator-card {
+        transition: none;
+    }
 }
 </style>

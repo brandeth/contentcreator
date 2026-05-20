@@ -268,7 +268,7 @@ onBeforeUnmount(() => {
                         class="grid gap-5 lg:grid-cols-[1fr_0.85fr] lg:items-center"
                     >
                         <div
-                            class="relative aspect-4/5 min-h-0 overflow-hidden rounded-lg border border-brand-neutral-900 bg-brand-neutral-0 shadow-[4px_4px_0_0_var(--color-brand-neutral-900)]"
+                            class="relative aspect-4/5 min-h-0 overflow-hidden rounded-lg border border-brand-neutral-900 bg-brand-neutral-0 shadow-[4px_4px_0_0_var(--color-brand-neutral-900)] md:aspect-video lg:aspect-4/5"
                         >
                             <video
                                 v-if="
