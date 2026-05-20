@@ -27,6 +27,7 @@ import {
 } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import CreatorCarousel from '@/components/CreatorCarousel.vue';
+import CreatorParticleMotion from '@/components/CreatorParticleMotion.vue';
 import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
 import ModelMarqueeShowcase from '@/components/ModelMarqueeShowcase.vue';
 import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
@@ -434,15 +435,29 @@ const heroStats = ref<HTMLElement | null>(null);
 const heroDemoPanel = ref<HTMLElement | null>(null);
 const toolsSection = ref<HTMLElement | null>(null);
 const bentoGrid = ref<HTMLElement | null>(null);
+const testimonialsSection = ref<HTMLElement | null>(null);
 const toolsSectionVisible = ref(false);
 const pricingSection = ref<HTMLElement | null>(null);
 const pricingSectionVisible = ref(false);
+const comparisonSection = ref<HTMLElement | null>(null);
+const comparisonSectionVisible = ref(false);
+const comparisonEntranceSettled = ref(false);
+const comparisonEntranceDelay = 220;
+const comparisonCardStagger = 125;
+const comparisonEntranceSettleDelay =
+    comparisonEntranceDelay +
+    760 +
+    (comparisons.length - 1) * comparisonCardStagger +
+    520;
 let toolsObserver: IntersectionObserver | null = null;
 let pricingObserver: IntersectionObserver | null = null;
+let comparisonObserver: IntersectionObserver | null = null;
+let comparisonEntranceTimer: number | null = null;
 let viewportRevealFrame: number | null = null;
 let viewportRevealTimer: number | null = null;
 let heroAnimationContext: { revert: () => void } | null = null;
 let bentoAnimationContext: { revert: () => void } | null = null;
+let testimonialAnimationContext: { revert: () => void } | null = null;
 let heroTitleSplit: HeroTitleSplit | null = null;
 let heroSummarySplit: HeroTitleSplit | null = null;
 let pageMounted = false;
@@ -481,6 +496,41 @@ const revealPricingSection = () => {
     pricingSectionVisible.value = true;
     pricingObserver?.disconnect();
     pricingObserver = null;
+};
+
+const comparisonTransitionDelay = (delay: number) => {
+    if (!comparisonSectionVisible.value || comparisonEntranceSettled.value) {
+        return '0ms';
+    }
+
+    return `${delay}ms`;
+};
+
+const revealComparisonSection = (settleImmediately = false) => {
+    if (comparisonSectionVisible.value) {
+        return;
+    }
+
+    comparisonSectionVisible.value = true;
+    comparisonObserver?.disconnect();
+    comparisonObserver = null;
+
+    if (comparisonEntranceTimer !== null) {
+        window.clearTimeout(comparisonEntranceTimer);
+        comparisonEntranceTimer = null;
+    }
+
+    if (settleImmediately) {
+        comparisonEntranceSettled.value = true;
+
+        return;
+    }
+
+    comparisonEntranceSettled.value = false;
+    comparisonEntranceTimer = window.setTimeout(() => {
+        comparisonEntranceSettled.value = true;
+        comparisonEntranceTimer = null;
+    }, comparisonEntranceSettleDelay);
 };
 
 const revealToolsSection = () => {
@@ -522,7 +572,18 @@ const checkViewportReveals = () => {
         revealPricingSection();
     }
 
-    if (toolsSectionVisible.value && pricingSectionVisible.value) {
+    if (
+        !comparisonSectionVisible.value &&
+        sectionHasEnteredViewport(comparisonSection.value, 0.86)
+    ) {
+        revealComparisonSection();
+    }
+
+    if (
+        toolsSectionVisible.value &&
+        pricingSectionVisible.value &&
+        comparisonSectionVisible.value
+    ) {
         window.removeEventListener('scroll', scheduleViewportRevealCheck);
         window.removeEventListener('resize', scheduleViewportRevealCheck);
 
@@ -824,15 +885,91 @@ const animateBentoGrid = async () => {
     }, bentoGrid.value);
 };
 
+const revealTestimonialsImmediately = () => {
+    testimonialsSection.value
+        ?.querySelectorAll<HTMLElement>('.marketplace-testimonial-card')
+        .forEach((card) => {
+            card.style.removeProperty('opacity');
+            card.style.removeProperty('visibility');
+            card.style.removeProperty('transform');
+            card.style.removeProperty('transform-origin');
+        });
+};
+
+const animateTestimonials = async () => {
+    if (prefersReducedMotion()) {
+        revealTestimonialsImmediately();
+
+        return;
+    }
+
+    await nextTick();
+
+    if (!pageMounted || !testimonialsSection.value) {
+        return;
+    }
+
+    const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+        import('gsap'),
+        import('gsap/ScrollTrigger'),
+    ]);
+
+    if (!pageMounted || !testimonialsSection.value) {
+        return;
+    }
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    testimonialAnimationContext = gsap.context(() => {
+        const cards = gsap.utils.toArray<HTMLElement>(
+            '.marketplace-testimonial-card',
+        );
+
+        if (cards.length === 0) {
+            return;
+        }
+
+        gsap.set(cards, {
+            autoAlpha: 0,
+            y: 34,
+            scale: 0.96,
+            rotation: (index: number) => [-2.5, 1.5, -1][index] ?? 0,
+            transformOrigin: '50% 100%',
+        });
+
+        ScrollTrigger.create({
+            trigger: testimonialsSection.value,
+            start: 'top 78%',
+            once: true,
+            onEnter: () => {
+                gsap.to(cards, {
+                    autoAlpha: 1,
+                    y: 0,
+                    scale: 1,
+                    rotation: 0,
+                    stagger: 0.12,
+                    duration: 0.72,
+                    ease: 'back.out(1.35)',
+                    clearProps: 'opacity,visibility,transform,transformOrigin',
+                });
+            },
+        });
+
+        ScrollTrigger.refresh();
+    }, testimonialsSection.value);
+};
+
 onMounted(() => {
     pageMounted = true;
     void animateHero();
     void animateBentoGrid();
+    void animateTestimonials();
     void syncHeroDemoVideos();
 
     if (prefersReducedMotion()) {
         revealToolsSection();
         revealPricingSection();
+        revealComparisonSection(true);
 
         return;
     }
@@ -861,12 +998,28 @@ onMounted(() => {
         },
     );
 
+    comparisonObserver = new IntersectionObserver(
+        ([entry]) => {
+            if (entry?.isIntersecting) {
+                revealComparisonSection();
+            }
+        },
+        {
+            rootMargin: '0px 0px -14% 0px',
+            threshold: 0.01,
+        },
+    );
+
     if (toolsSection.value) {
         toolsObserver.observe(toolsSection.value);
     }
 
     if (pricingSection.value) {
         pricingObserver.observe(pricingSection.value);
+    }
+
+    if (comparisonSection.value) {
+        comparisonObserver.observe(comparisonSection.value);
     }
 
     window.addEventListener('scroll', scheduleViewportRevealCheck, {
@@ -892,10 +1045,12 @@ onBeforeUnmount(() => {
     pageMounted = false;
     heroAnimationContext?.revert();
     bentoAnimationContext?.revert();
+    testimonialAnimationContext?.revert();
     heroTitleSplit?.revert();
     heroSummarySplit?.revert();
     toolsObserver?.disconnect();
     pricingObserver?.disconnect();
+    comparisonObserver?.disconnect();
     window.removeEventListener('scroll', scheduleViewportRevealCheck);
     window.removeEventListener('resize', scheduleViewportRevealCheck);
 
@@ -905,6 +1060,10 @@ onBeforeUnmount(() => {
 
     if (viewportRevealFrame !== null) {
         window.clearTimeout(viewportRevealFrame);
+    }
+
+    if (comparisonEntranceTimer !== null) {
+        window.clearTimeout(comparisonEntranceTimer);
     }
 });
 </script>
@@ -1406,7 +1565,7 @@ onBeforeUnmount(() => {
                                     : undefined
                             "
                             :class="[
-                                'marketplace-bento-card group relative overflow-hidden rounded-[1.5rem] border border-brand-neutral-900 shadow-[3px_3px_0_0_#2e1401] transition hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#2e1401]',
+                                'marketplace-bento-card group relative overflow-hidden rounded-3xl border border-brand-neutral-900 shadow-[3px_3px_0_0_#2e1401] transition hover:-translate-y-1 hover:shadow-[5px_5px_0_0_#2e1401]',
                                 item.imageUrl || item.videoUrl
                                     ? 'flex items-end bg-cover bg-center text-white'
                                     : 'p-5',
@@ -1427,7 +1586,7 @@ onBeforeUnmount(() => {
 
                             <div
                                 v-if="item.imageUrl || item.videoUrl"
-                                class="absolute inset-0 bg-gradient-to-t from-brand-neutral-900/88 via-brand-neutral-900/28 to-transparent transition group-hover:from-brand-neutral-900/76"
+                                class="absolute inset-0 bg-linear-to-t from-brand-neutral-900/88 via-brand-neutral-900/28 to-transparent transition group-hover:from-brand-neutral-900/76"
                             />
 
                             <div
@@ -1451,7 +1610,7 @@ onBeforeUnmount(() => {
                                     'relative z-10',
                                     item.imageUrl || item.videoUrl
                                         ? 'w-full p-5 sm:p-6'
-                                        : 'max-w-[15rem]',
+                                        : 'max-w-60',
                                 ]"
                             >
                                 <span
@@ -1472,7 +1631,7 @@ onBeforeUnmount(() => {
                                     :class="[
                                         'leading-tight font-extrabold',
                                         item.imageUrl || item.videoUrl
-                                            ? 'max-w-[17rem] text-3xl'
+                                            ? 'max-w-68 text-3xl'
                                             : 'text-2xl',
                                     ]"
                                 >
@@ -1480,7 +1639,7 @@ onBeforeUnmount(() => {
                                 </h3>
                                 <p
                                     :class="[
-                                        'mt-3 hidden max-w-[22rem] text-sm leading-6 sm:block',
+                                        'mt-3 hidden max-w-88 text-sm leading-6 sm:block',
                                         item.imageUrl || item.videoUrl
                                             ? 'text-white/80'
                                             : item.accent.includes('text-white')
@@ -1498,7 +1657,7 @@ onBeforeUnmount(() => {
                             >
                                 <div
                                     v-if="item.visual === 'rings'"
-                                    class="absolute top-8 right-[-2rem] hidden h-32 w-[58%] items-center justify-around sm:flex"
+                                    class="absolute top-8 -right-8 hidden h-32 w-[58%] items-center justify-around sm:flex"
                                 >
                                     <div
                                         v-for="size in [
@@ -1689,10 +1848,10 @@ onBeforeUnmount(() => {
                                     class="absolute inset-0 flex items-center justify-center"
                                 >
                                     <div
-                                        class="mt-16 h-28 w-44 rounded-t-xl rounded-b-[2rem] bg-brand-neutral-900 shadow-[4px_4px_0_0_#2e1401]"
+                                        class="mt-16 h-28 w-44 rounded-t-xl rounded-b-4xl bg-brand-neutral-900 shadow-[4px_4px_0_0_#2e1401]"
                                     >
                                         <span
-                                            class="mx-auto -mt-8 block h-14 w-28 rounded-t-full border-[14px] border-b-0 border-brand-neutral-900"
+                                            class="mx-auto -mt-8 block h-14 w-28 rounded-t-full border-14 border-b-0 border-brand-neutral-900"
                                         />
                                         <span
                                             class="mt-8 ml-16 block w-fit rotate-[-8deg] rounded bg-brand-pink-400 px-2 py-1 text-xs font-bold"
@@ -1881,10 +2040,23 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="bg-brand-neutral-900 py-20 text-white">
+        <section
+            ref="comparisonSection"
+            class="bg-brand-neutral-900 py-20 text-white"
+        >
             <div class="mx-auto max-w-7xl px-5 sm:px-8">
                 <div
-                    class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between"
+                    class="flex flex-col gap-4 transition-all duration-800 ease-out md:flex-row md:items-end md:justify-between"
+                    :class="
+                        comparisonSectionVisible
+                            ? 'blur-0 translate-y-0 opacity-100'
+                            : 'translate-y-7 opacity-0 blur-[2px]'
+                    "
+                    :style="{
+                        transitionDelay: comparisonTransitionDelay(
+                            comparisonEntranceDelay,
+                        ),
+                    }"
                 >
                     <div>
                         <p
@@ -1899,7 +2071,17 @@ onBeforeUnmount(() => {
                         </h2>
                     </div>
                     <div
-                        class="inline-flex w-fit items-center gap-2 rounded-full border border-white bg-white px-4 py-2 text-xs font-extrabold text-brand-neutral-900 shadow-[3px_3px_0_0_var(--color-brand-yellow-500)]"
+                        class="inline-flex w-fit items-center gap-2 rounded-full border border-white bg-white px-4 py-2 text-xs font-extrabold text-brand-neutral-900 shadow-[3px_3px_0_0_var(--color-brand-yellow-500)] transition-all duration-600 ease-out"
+                        :class="
+                            comparisonSectionVisible
+                                ? 'translate-x-0 scale-100 opacity-100'
+                                : 'translate-x-4 scale-95 opacity-0 md:-translate-y-2'
+                        "
+                        :style="{
+                            transitionDelay: comparisonTransitionDelay(
+                                comparisonEntranceDelay + 140,
+                            ),
+                        }"
                     >
                         <Sparkles class="size-4 text-brand-pink-700" />
                         One workspace, fewer tabs
@@ -1910,7 +2092,17 @@ onBeforeUnmount(() => {
                     class="mt-10 grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch"
                 >
                     <div
-                        class="flex h-full flex-col rounded-4xl border border-white bg-brand-yellow-500 p-5 text-brand-neutral-900 shadow-[8px_8px_0_0_var(--color-brand-neutral-900)] sm:p-7 lg:-rotate-1"
+                        class="flex h-full flex-col rounded-4xl border border-white bg-brand-yellow-500 p-5 text-brand-neutral-900 shadow-[8px_8px_0_0_var(--color-brand-teal-400)] transition-all duration-800 ease-out will-change-transform sm:p-7"
+                        :class="
+                            comparisonSectionVisible
+                                ? 'translate-y-0 scale-100 opacity-100 lg:-rotate-1'
+                                : 'translate-y-12 scale-[0.97] opacity-0 lg:rotate-2'
+                        "
+                        :style="{
+                            transitionDelay: comparisonTransitionDelay(
+                                comparisonEntranceDelay + 260,
+                            ),
+                        }"
                     >
                         <div class="flex items-start justify-between gap-4">
                             <div>
@@ -1935,9 +2127,21 @@ onBeforeUnmount(() => {
                             class="mt-8 grid flex-1 auto-rows-fr gap-3 sm:grid-cols-2"
                         >
                             <div
-                                v-for="item in comparisons"
+                                v-for="(item, index) in comparisons"
                                 :key="item.promptEdit"
-                                class="flex h-full flex-col rounded-3xl border border-brand-neutral-900 bg-white p-4 shadow-[3px_3px_0_0_#2e1401]"
+                                class="flex h-full flex-col rounded-3xl border border-brand-neutral-900 bg-white p-4 shadow-[3px_3px_0_0_#2e1401] transition-all duration-500 ease-out will-change-transform"
+                                :class="
+                                    comparisonSectionVisible
+                                        ? 'translate-y-0 scale-100 rotate-0 opacity-100'
+                                        : 'translate-y-8 scale-[0.94] opacity-0 odd:-rotate-2 even:rotate-2'
+                                "
+                                :style="{
+                                    transitionDelay: comparisonTransitionDelay(
+                                        comparisonEntranceDelay +
+                                            520 +
+                                            index * comparisonCardStagger,
+                                    ),
+                                }"
                             >
                                 <div
                                     class="flex items-start justify-between gap-2 xl:gap-3"
@@ -1993,7 +2197,17 @@ onBeforeUnmount(() => {
 
                     <div class="flex h-full flex-col gap-5 lg:pt-8">
                         <div
-                            class="flex items-center justify-between gap-3 rounded-3xl border border-white/20 bg-white/10 px-5 py-4"
+                            class="flex items-center justify-between gap-3 rounded-3xl border border-white/20 bg-white/10 px-5 py-4 transition-all duration-500 ease-out"
+                            :class="
+                                comparisonSectionVisible
+                                    ? 'translate-y-0 opacity-100'
+                                    : 'translate-y-8 opacity-0'
+                            "
+                            :style="{
+                                transitionDelay: comparisonTransitionDelay(
+                                    comparisonEntranceDelay + 560,
+                                ),
+                            }"
                         >
                             <p class="text-sm font-extrabold uppercase">
                                 Separate tools
@@ -2004,18 +2218,30 @@ onBeforeUnmount(() => {
                         </div>
 
                         <article
-                            v-for="item in comparisons"
+                            v-for="(item, index) in comparisons"
                             :key="item.separateTools"
-                            class="flex-1 rounded-3xl border border-brand-neutral-900 bg-white p-5 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-yellow-500)] transition-transform duration-300 ease-out lg:odd:rotate-1 lg:even:-rotate-1 lg:hover:rotate-0"
+                            class="flex-1 rounded-3xl border border-brand-neutral-900 bg-white p-5 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-yellow-500)] transition-all duration-500 ease-out will-change-transform lg:hover:rotate-0 lg:hover:duration-300"
+                            :class="
+                                comparisonSectionVisible
+                                    ? 'translate-x-0 translate-y-0 scale-100 opacity-100 lg:odd:rotate-1 lg:even:-rotate-1'
+                                    : 'translate-y-8 scale-[0.96] opacity-0 md:translate-x-8 lg:odd:rotate-3 lg:even:-rotate-3'
+                            "
+                            :style="{
+                                transitionDelay: comparisonTransitionDelay(
+                                    comparisonEntranceDelay +
+                                        760 +
+                                        index * comparisonCardStagger,
+                                ),
+                            }"
                         >
                             <p
                                 class="text-brand-neutral-500 text-xs font-extrabold uppercase"
                             >
                                 {{ item.need }}
                             </p>
-                            <div class="mt-3 flex items-start gap-3">
+                            <div class="mt-3 flex items-center gap-3">
                                 <span
-                                    class="mt-1 grid size-8 shrink-0 place-items-center rounded-full border border-brand-neutral-900 bg-brand-neutral-100"
+                                    class="grid size-8 shrink-0 place-items-center rounded-full border border-brand-neutral-900 bg-brand-neutral-100"
                                 >
                                     <PlugZap class="size-4" />
                                 </span>
@@ -2029,13 +2255,13 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="bg-white py-20">
+        <section ref="testimonialsSection" class="bg-white py-20">
             <div class="mx-auto max-w-7xl px-5 sm:px-8">
                 <div class="grid gap-4 md:grid-cols-3">
                     <figure
                         v-for="testimonial in testimonials"
                         :key="testimonial.name"
-                        class="rounded-3xl border border-brand-neutral-900 bg-brand-neutral-100 p-6 shadow-[3px_3px_0_0_#2e1401]"
+                        class="marketplace-testimonial-card rounded-3xl border border-brand-neutral-900 bg-brand-neutral-100 p-6 shadow-[3px_3px_0_0_#2e1401]"
                     >
                         <blockquote class="text-lg leading-7 font-bold">
                             “{{ testimonial.quote }}”
@@ -2108,9 +2334,11 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="px-5 pb-10 sm:px-8">
+        <CreatorParticleMotion />
+
+        <section class="px-5 pt-12 pb-10 sm:px-8 sm:pt-16">
             <div
-                class="mx-auto max-w-7xl rounded-[2rem] border border-brand-neutral-900 bg-brand-pink-400 p-8 text-center shadow-[6px_6px_0_0_#2e1401] sm:p-12"
+                class="mx-auto max-w-7xl rounded-4xl border border-brand-neutral-900 bg-brand-pink-400 p-8 text-center shadow-[6px_6px_0_0_#2e1401] sm:p-12"
             >
                 <h2
                     class="mx-auto max-w-3xl text-4xl leading-tight font-extrabold"
