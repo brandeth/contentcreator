@@ -380,6 +380,29 @@ const stats = [
     { value: '0', label: 'required subscriptions' },
 ];
 
+const footerStats = [
+    {
+        value: '100k+',
+        label: 'Creator assets',
+        accent: 'bg-brand-yellow-500',
+    },
+    {
+        value: '20+',
+        label: 'Tool categories',
+        accent: 'bg-brand-teal-400',
+    },
+    {
+        value: '0',
+        label: 'Required subs',
+        accent: 'bg-brand-pink-400',
+    },
+    {
+        value: '1',
+        label: 'Credit wallet',
+        accent: 'bg-brand-blue-400',
+    },
+];
+
 type HeroTitleSplit = {
     words: Element[];
     lines?: Element[];
@@ -424,6 +447,7 @@ const faqs = [
     },
 ];
 
+const currentYear = computed(() => new Date().getFullYear());
 const activeFaqIndex = ref<number | null>(0);
 const heroSection = ref<HTMLElement | null>(null);
 const heroEyebrow = ref<HTMLElement | null>(null);
@@ -2283,7 +2307,7 @@ onBeforeUnmount(() => {
 
         <ModelMarqueeShowcase :items="bentoItems" />
 
-        <section id="faq" class="py-20">
+        <section id="faq" class="pt-20 pb-8">
             <div
                 class="mx-auto grid max-w-7xl gap-8 px-5 sm:px-8 lg:grid-cols-[0.7fr_1.3fr]"
             >
@@ -2338,7 +2362,7 @@ onBeforeUnmount(() => {
             </div>
         </section>
 
-        <section class="px-5 pt-12 pb-10 sm:px-8 sm:pt-16">
+        <section class="px-5 pt-4 pb-10 sm:px-8 sm:pt-6">
             <div
                 class="mx-auto max-w-7xl rounded-4xl border border-brand-neutral-900 bg-brand-pink-400 p-8 text-center shadow-[6px_6px_0_0_#2e1401] sm:p-12"
             >
@@ -2363,5 +2387,124 @@ onBeforeUnmount(() => {
                 </a>
             </div>
         </section>
+
+        <footer
+            class="relative overflow-hidden border-t border-brand-neutral-900 bg-brand-neutral-900 px-5 py-12 text-white sm:px-8 sm:py-16"
+        >
+            <div
+                class="pointer-events-none absolute inset-x-0 top-0 h-2 bg-[linear-gradient(90deg,var(--color-brand-yellow-500),var(--color-brand-pink-400),var(--color-brand-teal-400),var(--color-brand-blue-400))]"
+            />
+
+            <div
+                class="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1fr_22rem_24rem] lg:items-start"
+            >
+                <div class="max-w-xl">
+                    <div class="flex items-center gap-3">
+                        <span
+                            class="grid size-11 place-items-center rounded-full border border-white bg-brand-yellow-500 text-brand-neutral-900 shadow-[3px_3px_0_0_var(--color-brand-pink-400)]"
+                        >
+                            <Sparkles class="size-5" />
+                        </span>
+                        <p class="text-3xl font-extrabold">PromptEdit</p>
+                    </div>
+                    <p class="mt-5 max-w-md text-sm leading-6 text-white/72">
+                        A creator marketplace for AI generation tools,
+                        templates, plugins, and reusable production assets.
+                    </p>
+                    <div class="mt-6 flex flex-wrap gap-2">
+                        <span
+                            class="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-extrabold text-brand-yellow-500"
+                        >
+                            AI image
+                        </span>
+                        <span
+                            class="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-extrabold text-brand-teal-400"
+                        >
+                            Video
+                        </span>
+                        <span
+                            class="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-extrabold text-brand-pink-400"
+                        >
+                            Audio
+                        </span>
+                        <span
+                            class="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-extrabold text-brand-blue-400"
+                        >
+                            Plugins
+                        </span>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-3xl border border-white/15 bg-white/6 p-4 shadow-[4px_4px_0_0_var(--color-brand-pink-400)]"
+                >
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <p class="text-xs font-extrabold text-white uppercase">
+                            Creator stats
+                        </p>
+                        <span
+                            class="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[0.65rem] leading-none font-extrabold text-brand-yellow-500 uppercase"
+                        >
+                            Live
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div
+                            v-for="footerStat in footerStats"
+                            :key="footerStat.label"
+                            class="rounded-2xl border border-white/14 bg-brand-neutral-900/60 p-3"
+                        >
+                            <span
+                                :class="[
+                                    'mb-4 block h-2 w-10 rounded-full border border-white/20',
+                                    footerStat.accent,
+                                ]"
+                            />
+                            <p class="text-2xl leading-none font-extrabold">
+                                {{ footerStat.value }}
+                            </p>
+                            <p
+                                class="mt-2 text-xs leading-4 font-bold text-white/62"
+                            >
+                                {{ footerStat.label }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="rounded-3xl border border-white/20 bg-white p-4 text-brand-neutral-900 shadow-[5px_5px_0_0_var(--color-brand-teal-400)]"
+                >
+                    <div
+                        class="flex items-center justify-between gap-3 border-b border-brand-neutral-900/15 pb-4"
+                    >
+                        <div>
+                            <p class="text-xs font-extrabold uppercase">
+                                Live marketplace
+                            </p>
+                            <p
+                                class="mt-1 text-sm font-semibold text-brand-neutral-600"
+                            >
+                                Credits ready for every creator workflow.
+                            </p>
+                        </div>
+                        <Zap class="size-6 text-brand-pink-700" />
+                    </div>
+                    <a
+                        href="https://promptedit.com"
+                        class="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-neutral-900 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-brand-blue-600"
+                    >
+                        Visit PromptEdit
+                        <ArrowRight class="size-4" />
+                    </a>
+                    <p
+                        class="mt-4 text-xs font-semibold text-brand-neutral-600"
+                    >
+                        &copy; {{ currentYear }} Content Creator. All rights
+                        reserved.
+                    </p>
+                </div>
+            </div>
+        </footer>
     </main>
 </template>
