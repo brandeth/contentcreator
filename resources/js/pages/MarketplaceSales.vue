@@ -605,6 +605,9 @@ const scheduleViewportRevealCheck = () => {
 const prefersReducedMotion = () =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const canAnimateBentoGrid = () =>
+    window.matchMedia('(min-width: 1024px)').matches;
+
 const revealHeroImmediately = () => {
     heroEyebrow.value?.classList.remove('opacity-0');
     heroTitle.value?.classList.remove('opacity-0');
@@ -820,13 +823,15 @@ const revealBentoGridImmediately = () => {
     bentoGrid.value
         ?.querySelectorAll<HTMLElement>('.marketplace-bento-card')
         .forEach((card) => {
+            card.style.removeProperty('opacity');
+            card.style.removeProperty('visibility');
             card.style.removeProperty('transform');
             card.style.removeProperty('transform-origin');
         });
 };
 
 const animateBentoGrid = async () => {
-    if (prefersReducedMotion()) {
+    if (prefersReducedMotion() || !canAnimateBentoGrid()) {
         revealBentoGridImmediately();
 
         return;

@@ -41,6 +41,14 @@ const videoUrls = [
 const PARTICLE_COUNT = 99;
 const MAX_PIXEL_RATIO = 1.5;
 const CARD_RADIUS = 24;
+const MOBILE_TIMELINE_START_TIME = 100;
+const PLACEHOLDER_COLORS = [
+    '#f8cb46',
+    '#47d9c9',
+    '#fc8ae5',
+    '#92adeb',
+    '#ffffff',
+];
 
 const flashcardAssets: FlashcardAsset[] = [
     ...imageUrls.map((url) => ({ type: 'image' as const, url })),
@@ -59,10 +67,12 @@ let isComponentMounted = false;
 const prefersReducedMotion = () =>
     window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+const isMobileViewport = () => window.matchMedia('(max-width: 767px)').matches;
+
 const createImage = (url: string) => {
     const image = new Image();
     image.decoding = 'async';
-    image.loading = 'lazy';
+    image.loading = 'eager';
     image.src = url;
 
     return image;
@@ -74,7 +84,7 @@ const createVideo = (url: string) => {
     video.muted = true;
     video.loop = true;
     video.playsInline = true;
-    video.preload = 'metadata';
+    video.preload = 'auto';
 
     return video;
 };
@@ -131,6 +141,29 @@ const drawCoveredMedia = (
         width,
         height,
     );
+};
+
+const drawPlaceholder = (
+    context: CanvasRenderingContext2D,
+    index: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+) => {
+    const gradient = context.createLinearGradient(x, y, x + width, y + height);
+
+    gradient.addColorStop(
+        0,
+        PLACEHOLDER_COLORS[index % PLACEHOLDER_COLORS.length],
+    );
+    gradient.addColorStop(
+        1,
+        PLACEHOLDER_COLORS[(index + 2) % PLACEHOLDER_COLORS.length],
+    );
+
+    context.fillStyle = gradient;
+    context.fillRect(x, y, width, height);
 };
 
 const createRoundedRectPath = (
@@ -240,9 +273,11 @@ const createAnimation = async () => {
     };
     const draw = () => {
         context.clearRect(0, 0, canvasWidth, canvasHeight);
-        drawOrder.forEach((particle) => {
+        drawOrder.forEach((particle, index) => {
             const renderedWidth = cardWidth * particle.scale;
             const renderedHeight = cardHeight * particle.scale;
+            const drawableMedia = getDrawableMedia(particle);
+            const mediaSize = getMediaSize(drawableMedia);
 
             context.save();
             context.translate(canvasWidth / 2, canvasHeight / 2);
@@ -256,14 +291,27 @@ const createAnimation = async () => {
                 CARD_RADIUS * particle.scale,
             );
             context.clip();
-            drawCoveredMedia(
-                context,
-                getDrawableMedia(particle),
-                particle.x,
-                particle.y,
-                renderedWidth,
-                renderedHeight,
-            );
+
+            if (mediaSize.width && mediaSize.height) {
+                drawCoveredMedia(
+                    context,
+                    drawableMedia,
+                    particle.x,
+                    particle.y,
+                    renderedWidth,
+                    renderedHeight,
+                );
+            } else {
+                drawPlaceholder(
+                    context,
+                    index,
+                    particle.x,
+                    particle.y,
+                    renderedWidth,
+                    renderedHeight,
+                );
+            }
+
             context.restore();
         });
     };
@@ -302,9 +350,10 @@ const createAnimation = async () => {
                     stagger: { each: -0.055, repeat: -1 },
                 },
                 0,
-            )
-            .seek(100);
-        timeline.pause(0);
+            );
+        timeline
+            .seek(isMobileViewport() ? MOBILE_TIMELINE_START_TIME : 0)
+            .pause();
         draw();
     };
     const playVideos = () => {
@@ -356,12 +405,21 @@ const createAnimation = async () => {
 
         startAnimation();
     };
+    const handlePageShow = () => {
+        resizeCanvas();
+        createTimeline();
+        startAnimation();
+    };
 
     resizeCanvas();
     createTimeline();
     window.addEventListener('resize', handleResize);
+    window.addEventListener('pageshow', handlePageShow);
     document.addEventListener('visibilitychange', handleVisibilityChange);
     particleCanvas.addEventListener('pointerup', handlePointerUp);
+    particleCanvas.addEventListener('touchstart', startAnimation, {
+        passive: true,
+    });
     sharedMedia.forEach((media) => {
         media.addEventListener('loadeddata', draw, { once: true });
         media.addEventListener('load', draw, { once: true });
@@ -374,11 +432,13 @@ const createAnimation = async () => {
 
     cleanupAnimation = () => {
         window.removeEventListener('resize', handleResize);
+        window.removeEventListener('pageshow', handlePageShow);
         document.removeEventListener(
             'visibilitychange',
             handleVisibilityChange,
         );
         particleCanvas.removeEventListener('pointerup', handlePointerUp);
+        particleCanvas.removeEventListener('touchstart', startAnimation);
         timeline?.kill();
         pauseVideos();
         context.clearRect(0, 0, canvasWidth, canvasHeight);

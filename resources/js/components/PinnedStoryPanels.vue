@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 
-const HEADER_OFFSET = 64;
-
 type StoryPanel = {
     eyebrow: string;
     title: string;
@@ -87,6 +85,8 @@ const panels: StoryPanel[] = [
 const wrapper = ref<HTMLElement | null>(null);
 let cleanupAnimations: (() => void) | null = null;
 let isComponentMounted = false;
+let panelMediaQuery: MediaQueryList | null = null;
+let handlePanelBreakpointChange: (() => void) | null = null;
 
 const teardownAnimations = () => {
     cleanupAnimations?.();
@@ -127,6 +127,21 @@ const initializePinnedPanels = async () => {
     );
     const activeTriggers: Array<{ kill: () => void }> = [];
     const activeTimelines: Array<{ kill: () => void }> = [];
+    const removeRefreshListeners: Array<() => void> = [];
+    let refreshAnimationFrame = 0;
+    const refreshPinnedPanels = () => {
+        if (refreshAnimationFrame) {
+            return;
+        }
+
+        refreshAnimationFrame = window.requestAnimationFrame(() => {
+            refreshAnimationFrame = 0;
+
+            if (isComponentMounted) {
+                ScrollTrigger.refresh();
+            }
+        });
+    };
 
     panelsToPin.slice(0, -1).forEach((panel) => {
         const frame = panel.querySelector<HTMLElement>(
@@ -140,36 +155,52 @@ const initializePinnedPanels = async () => {
             return;
         }
 
-        const getFrameHeight = () => frame.clientHeight;
+        const getPanelHeight = () =>
+            Math.max(inner.offsetHeight, inner.scrollHeight);
+        const getVisibleHeight = () => frame.clientHeight || window.innerHeight;
         const getScrollDistance = () =>
-            Math.max(inner.scrollHeight - getFrameHeight(), 0);
-        const getPinDistance = () =>
-            getScrollDistance() + panel.getBoundingClientRect().height;
+            Math.max(getPanelHeight() - getVisibleHeight(), 0);
+        const getFakeScrollRatio = () => {
+            const scrollDistance = getScrollDistance();
+
+            return scrollDistance > 0
+                ? scrollDistance / (scrollDistance + getVisibleHeight())
+                : 0;
+        };
+        const syncPanelSpacing = () => {
+            const scrollDistance = getScrollDistance();
+
+            panel.style.marginBottom = scrollDistance
+                ? `${scrollDistance}px`
+                : '';
+        };
+
+        syncPanelSpacing();
 
         const timeline = gsap.timeline({
             scrollTrigger: {
                 trigger: panel,
-                start: `bottom bottom-=${HEADER_OFFSET}`,
-                end: () => `+=${getPinDistance()}`,
-                invalidateOnRefresh: true,
+                start: 'bottom bottom',
+                end: () =>
+                    getScrollDistance()
+                        ? `+=${getScrollDistance() + getVisibleHeight()}`
+                        : 'bottom top',
                 pin: true,
                 pinSpacing: false,
                 scrub: true,
-                onRefresh: () => {
-                    const scrollDistance = getScrollDistance();
-
-                    panel.style.marginBottom = scrollDistance
-                        ? `${scrollDistance}px`
-                        : '';
-                },
+                invalidateOnRefresh: true,
+                onRefresh: syncPanelSpacing,
             },
         });
 
-        timeline.to(inner, {
-            y: () => -getScrollDistance(),
-            duration: () => Math.max(getScrollDistance(), 0.001),
-            ease: 'none',
-        });
+        if (getFakeScrollRatio()) {
+            timeline.to(inner, {
+                yPercent: -100,
+                y: () => getVisibleHeight(),
+                duration: () => 1 / (1 - getFakeScrollRatio()) - 1,
+                ease: 'none',
+            });
+        }
 
         timeline
             .fromTo(
@@ -177,14 +208,14 @@ const initializePinnedPanels = async () => {
                 { opacity: 1, scale: 1 },
                 {
                     opacity: 0.5,
-                    scale: 0.86,
-                    duration: () => panel.getBoundingClientRect().height * 0.9,
+                    scale: 0.7,
+                    duration: 0.9,
                     ease: 'none',
                 },
             )
             .to(panel, {
                 opacity: 0,
-                duration: () => panel.getBoundingClientRect().height * 0.1,
+                duration: 0.1,
                 ease: 'none',
             });
 
@@ -195,9 +226,34 @@ const initializePinnedPanels = async () => {
         }
     });
 
+    const resizeObserver = new ResizeObserver(refreshPinnedPanels);
+    resizeObserver.observe(root);
+    removeRefreshListeners.push(() => resizeObserver.disconnect());
+
+    root.querySelectorAll('img, video').forEach((asset) => {
+        asset.addEventListener('load', refreshPinnedPanels);
+        asset.addEventListener('loadedmetadata', refreshPinnedPanels);
+        asset.addEventListener('loadeddata', refreshPinnedPanels);
+
+        removeRefreshListeners.push(() => {
+            asset.removeEventListener('load', refreshPinnedPanels);
+            asset.removeEventListener('loadedmetadata', refreshPinnedPanels);
+            asset.removeEventListener('loadeddata', refreshPinnedPanels);
+        });
+    });
+
+    document.fonts?.ready.then(refreshPinnedPanels);
+
     ScrollTrigger.refresh();
 
     cleanupAnimations = () => {
+        if (refreshAnimationFrame) {
+            window.cancelAnimationFrame(refreshAnimationFrame);
+        }
+
+        removeRefreshListeners.forEach((removeRefreshListener) =>
+            removeRefreshListener(),
+        );
         activeTimelines.forEach((timeline) => timeline.kill());
         activeTriggers.forEach((trigger) => trigger.kill());
         panelsToPin.forEach((panel) => {
@@ -212,11 +268,27 @@ const initializePinnedPanels = async () => {
 
 onMounted(() => {
     isComponentMounted = true;
+    panelMediaQuery = window.matchMedia('(min-width: 768px)');
+    handlePanelBreakpointChange = () => {
+        teardownAnimations();
+        initializePinnedPanels();
+    };
+    panelMediaQuery.addEventListener('change', handlePanelBreakpointChange);
+
     initializePinnedPanels();
 });
 
 onBeforeUnmount(() => {
     isComponentMounted = false;
+    if (panelMediaQuery && handlePanelBreakpointChange) {
+        panelMediaQuery.removeEventListener(
+            'change',
+            handlePanelBreakpointChange,
+        );
+    }
+
+    panelMediaQuery = null;
+    handlePanelBreakpointChange = null;
     teardownAnimations();
 });
 </script>
@@ -228,10 +300,14 @@ onBeforeUnmount(() => {
         aria-label="Creator marketplace workflow"
     >
         <article
-            v-for="panel in panels"
+            v-for="(panel, panelIndex) in panels"
             :key="panel.title"
             :class="[
-                'pinned-story-panel relative flex min-h-[calc(100svh-4rem)] items-stretch overflow-visible border-y border-brand-neutral-900/10 md:overflow-hidden',
+                'pinned-story-panel relative flex min-h-svh items-stretch overflow-visible border-y border-brand-neutral-900/10 md:overflow-hidden',
+                panelIndex === panels.length - 1
+                    ? 'pinned-story-panel--terminal'
+                    : '',
+                panelIndex === 1 ? 'pinned-story-panel--scrollable' : '',
                 panel.surfaceClass,
             ]"
         >
@@ -239,7 +315,12 @@ onBeforeUnmount(() => {
                 class="pinned-story-panel__frame flex w-full items-stretch overflow-visible md:overflow-hidden"
             >
                 <div
-                    class="pinned-story-panel__inner mx-auto grid min-h-full w-full max-w-7xl gap-8 px-5 py-10 sm:px-8 md:grid-cols-[0.9fr_1.1fr] md:items-center lg:gap-12 lg:py-14"
+                    :class="[
+                        'pinned-story-panel__inner mx-auto grid min-h-full w-full max-w-7xl gap-8 px-5 py-10 sm:px-8 md:grid-cols-[0.9fr_1.1fr] md:items-center lg:gap-12 lg:py-14',
+                        panelIndex === 1
+                            ? 'pinned-story-panel__inner--scrollable'
+                            : '',
+                    ]"
                 >
                     <div class="flex flex-col items-start">
                         <span
@@ -344,11 +425,29 @@ onBeforeUnmount(() => {
 }
 
 .pinned-story-panel__frame {
+    height: auto;
     max-height: none;
+}
+
+.pinned-story-panel--terminal {
+    min-height: auto;
+    overflow: visible;
+}
+
+.pinned-story-panel--terminal .pinned-story-panel__frame {
+    height: auto;
+    max-height: none;
+    overflow: visible;
 }
 
 .pinned-story-panel__inner {
     will-change: transform;
+}
+
+.pinned-story-panel__inner--scrollable {
+    height: auto;
+    min-height: auto;
+    padding-bottom: max(20vh, 3.5rem);
 }
 
 .pinned-story-panels.is-static .pinned-story-panel {
@@ -358,6 +457,7 @@ onBeforeUnmount(() => {
 }
 
 .pinned-story-panels.is-static .pinned-story-panel__frame {
+    height: auto;
     max-height: none;
     overflow: visible;
 }
@@ -368,7 +468,8 @@ onBeforeUnmount(() => {
 
 @media (min-width: 768px) {
     .pinned-story-panel__frame {
-        max-height: calc(100svh - 4rem);
+        height: 100svh;
+        max-height: 100svh;
     }
 }
 </style>

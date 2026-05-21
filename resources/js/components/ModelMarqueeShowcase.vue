@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Play, Sparkles } from 'lucide-vue-next';
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 
 type ShowcaseItem = {
     title: string;
@@ -48,126 +48,10 @@ const showcaseItems = computed(() =>
         })),
 );
 
-const showcaseSection = ref<HTMLElement | null>(null);
-let showcaseAnimationContext: { revert: () => void } | null = null;
-let componentMounted = false;
-
-const prefersReducedMotion = () =>
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-const revealShowcaseImmediately = () => {
-    showcaseSection.value
-        ?.querySelectorAll<HTMLElement>(
-            '.model-showcase-logo, .model-showcase-card',
-        )
-        .forEach((element) => {
-            element.style.removeProperty('opacity');
-            element.style.removeProperty('visibility');
-            element.style.removeProperty('transform');
-            element.style.removeProperty('transform-origin');
-            element.style.removeProperty('filter');
-        });
-};
-
-const animateShowcaseEntrance = async () => {
-    if (prefersReducedMotion()) {
-        revealShowcaseImmediately();
-
-        return;
-    }
-
-    await nextTick();
-
-    if (!componentMounted || !showcaseSection.value) {
-        return;
-    }
-
-    const [{ gsap }, { ScrollTrigger }] = await Promise.all([
-        import('gsap'),
-        import('gsap/ScrollTrigger'),
-    ]);
-
-    if (!componentMounted || !showcaseSection.value) {
-        return;
-    }
-
-    gsap.registerPlugin(ScrollTrigger);
-
-    showcaseAnimationContext = gsap.context(() => {
-        const logos = gsap.utils.toArray<HTMLElement>('.model-showcase-logo');
-        const cards = gsap.utils.toArray<HTMLElement>('.model-showcase-card');
-
-        gsap.set(logos, {
-            autoAlpha: 0,
-            y: 16,
-            scale: 0.94,
-            filter: 'blur(6px)',
-        });
-        gsap.set(cards, {
-            autoAlpha: 0,
-            y: 46,
-            scale: 0.9,
-            rotation: (index: number) => [-4, 3, -2, 2, -3][index] ?? 0,
-            transformOrigin: '50% 100%',
-            filter: 'blur(8px)',
-        });
-
-        ScrollTrigger.create({
-            trigger: showcaseSection.value,
-            start: 'top 76%',
-            once: true,
-            onEnter: () => {
-                const timeline = gsap.timeline({
-                    defaults: { ease: 'power3.out' },
-                });
-
-                timeline
-                    .to(logos, {
-                        autoAlpha: 1,
-                        y: 0,
-                        scale: 1,
-                        filter: 'blur(0px)',
-                        stagger: 0.035,
-                        duration: 0.45,
-                        clearProps: 'opacity,visibility,transform,filter',
-                    })
-                    .to(
-                        cards,
-                        {
-                            autoAlpha: 1,
-                            y: 0,
-                            scale: 1,
-                            rotation: 0,
-                            filter: 'blur(0px)',
-                            stagger: 0.1,
-                            duration: 0.78,
-                            ease: 'back.out(1.25)',
-                            clearProps:
-                                'opacity,visibility,transform,transformOrigin,filter',
-                        },
-                        '-=0.1',
-                    );
-            },
-        });
-
-        ScrollTrigger.refresh();
-    }, showcaseSection.value);
-};
-
-onMounted(() => {
-    componentMounted = true;
-    void animateShowcaseEntrance();
-});
-
-onBeforeUnmount(() => {
-    componentMounted = false;
-    showcaseAnimationContext?.revert();
-});
 </script>
 
 <template>
     <section
-        ref="showcaseSection"
         class="relative isolate overflow-hidden bg-brand-neutral-0 py-16 text-brand-neutral-900 sm:py-20"
     >
         <div class="relative z-10 mx-auto max-w-7xl px-5 sm:px-8">
@@ -197,7 +81,7 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-                class="mt-14 flex gap-4 overflow-x-auto pb-3 md:mt-18 md:justify-center md:overflow-visible md:pb-0 lg:gap-5"
+                class="mt-14 flex gap-4 overflow-x-auto pb-3 pr-3 md:mt-18 md:justify-center md:overflow-visible md:pb-0 md:pr-0 lg:gap-5"
             >
                 <article
                     v-for="item in showcaseItems"
