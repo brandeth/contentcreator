@@ -631,6 +631,9 @@ const prefersReducedMotion = () =>
 const canAnimateBentoGrid = () =>
     window.matchMedia('(min-width: 1024px)').matches;
 
+const canPrioritizeHeroMockup = () =>
+    window.matchMedia('(min-width: 1024px)').matches;
+
 const revealHeroImmediately = () => {
     heroEyebrow.value?.classList.remove('opacity-0');
     heroTitle.value?.classList.remove('opacity-0');
@@ -749,17 +752,87 @@ const animateHero = async () => {
             onInterrupt: clearDemoAnimationProps,
         });
 
-        timeline
-            .from(
+        gsap.set([panel, ...demoItems], {
+            autoAlpha: 0,
+            y: 22,
+        });
+        gsap.set(panel, {
+            scale: 0.985,
+        });
+
+        const animateHeroDetails = () => {
+            timeline
+                .from(
+                    summarySplit.lines ?? [],
+                    {
+                        y: 14,
+                        opacity: 0,
+                        stagger: 0.045,
+                        duration: 0.34,
+                    },
+                    '+=0.04',
+                )
+                .set(actions, { opacity: 1 }, '-=0.08')
+                .fromTo(
+                    actionItems,
+                    {
+                        y: 18,
+                        opacity: 0,
+                        scale: 0.96,
+                    },
+                    {
+                        y: 0,
+                        opacity: 1,
+                        scale: 1,
+                        stagger: 0.08,
+                        duration: 0.42,
+                        ease: 'back.out(1.35)',
+                        clearProps: 'opacity,transform',
+                    },
+                    '-=0.08',
+                )
+                .from(
+                    statItems,
+                    {
+                        y: 10,
+                        opacity: 0,
+                        stagger: 0.045,
+                        duration: 0.28,
+                    },
+                    '-=0.12',
+                );
+        };
+
+        const animateHeroMockup = () => {
+            timeline.to(
                 panel,
                 {
-                    y: 16,
-                    scale: 0.985,
-                    opacity: 0,
-                    duration: 0.38,
+                    autoAlpha: 1,
+                    y: 0,
+                    scale: 1,
+                    duration: 0.42,
+                    ease: 'power2.out',
                 },
-                0,
-            )
+                '+=0.04',
+            );
+
+            if (demoItems.length > 0) {
+                timeline.to(
+                    demoItems,
+                    {
+                        y: 0,
+                        autoAlpha: 1,
+                        stagger: 0.035,
+                        duration: 0.3,
+                        ease: 'power2.out',
+                        clearProps: 'opacity,visibility,transform',
+                    },
+                    '-=0.1',
+                );
+            }
+        };
+
+        timeline
             .from(eyebrow, {
                 y: 12,
                 scale: 0.985,
@@ -778,67 +851,17 @@ const animateHero = async () => {
                     ease: 'back',
                 },
                 '-=0.06',
-            )
-            .from(
-                summarySplit.lines ?? [],
-                {
-                    y: 14,
-                    opacity: 0,
-                    stagger: 0.045,
-                    duration: 0.34,
-                },
-                '-=0.2',
-            )
-            .set(actions, { opacity: 1 }, '-=0.08')
-            .fromTo(
-                actionItems,
-                {
-                    y: 18,
-                    opacity: 0,
-                    scale: 0.96,
-                },
-                {
-                    y: 0,
-                    opacity: 1,
-                    scale: 1,
-                    stagger: 0.08,
-                    duration: 0.42,
-                    ease: 'back.out(1.35)',
-                    clearProps: 'opacity,transform',
-                },
-                '-=0.08',
-            )
-            .from(
-                statItems,
-                {
-                    y: 10,
-                    opacity: 0,
-                    stagger: 0.045,
-                    duration: 0.28,
-                },
-                '-=0.12',
             );
 
-        if (demoItems.length > 0) {
-            timeline.fromTo(
-                demoItems,
-                {
-                    y: 22,
-                    opacity: 0,
-                    visibility: 'hidden',
-                },
-                {
-                    y: 0,
-                    opacity: 1,
-                    visibility: 'visible',
-                    stagger: 0.035,
-                    duration: 0.3,
-                    ease: 'power2.out',
-                    clearProps: 'opacity,visibility,transform',
-                },
-                0.08,
-            );
+        if (canPrioritizeHeroMockup()) {
+            animateHeroMockup();
+            animateHeroDetails();
+
+            return;
         }
+
+        animateHeroDetails();
+        animateHeroMockup();
     }, heroSection.value);
 };
 
