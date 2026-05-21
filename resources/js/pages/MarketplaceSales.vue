@@ -27,7 +27,6 @@ import {
 } from 'vue';
 import type { ComponentPublicInstance } from 'vue';
 import CreatorCarousel from '@/components/CreatorCarousel.vue';
-import CreatorParticleMotion from '@/components/CreatorParticleMotion.vue';
 import CreatorWorkflowMotion from '@/components/CreatorWorkflowMotion.vue';
 import ModelMarqueeShowcase from '@/components/ModelMarqueeShowcase.vue';
 import PinnedStoryPanels from '@/components/PinnedStoryPanels.vue';
@@ -2338,8 +2337,6 @@ onBeforeUnmount(() => {
                 </div>
             </div>
         </section>
-
-        <CreatorParticleMotion />
 
         <section class="px-5 pt-12 pb-10 sm:px-8 sm:pt-16">
             <div
